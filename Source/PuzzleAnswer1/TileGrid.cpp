@@ -35,7 +35,7 @@ void ATileGrid::BeginPlay()
 		{
 			FVector TileLocation = Tile->GetActorLocation();
 			TileLocation.Z += 200;
-			DrawDebugSphere(GetWorld(), TileLocation, 20.0f, 12, FColor::Blue, false, 360.0f); // 5초 동안 유지
+			DrawDebugSphere(GetWorld(), TileLocation, 20.0f, 12, FColor::Black, false, 360.0f); // 5초 동안 유지
 		}
 	}
 }
