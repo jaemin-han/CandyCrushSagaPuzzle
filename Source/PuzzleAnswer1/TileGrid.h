@@ -14,8 +14,8 @@ enum class ETileGridState : uint8
 	Idle UMETA(DisplayName = "Idle"),
 	CheckingForRepeated UMETA(DisplayName = "Checking For Repeated"),
 	RemovingMatches UMETA(DisplayName = "Removing Matches"),
-	GeneratingNewTiles UMETA(DisplayName = "Generating New Tiles"),
-	DroppingTiles UMETA(DisplayName = "Dropping Tiles"),
+	CheckAllTilesToMoveAndDropTiles UMETA(DisplayName = "Generating New Tiles"),
+	WaitUntilAllTilesStopMoving UMETA(DisplayName = "Wait Until All Tiles Stop Moving"),
 	CheckingForPossibleTiles UMETA(DisplayName = "Checking For Possible Tiles"),
 };
 
@@ -80,6 +80,13 @@ public:
 	TArray<int32> NumOfRepeatedTilesArray;
 	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	TSet<ATile*> RepeatedTilesSet;
-	
+
+	void RemoveRepeatedTiles();
+	void MoveTilesDown();
+	void GenerateNewTiles();
+
+	FThreadSafeCounter MovingTilesCounter;
+	UFUNCTION()
+	void OnTileStoppedMoving();
 };
 

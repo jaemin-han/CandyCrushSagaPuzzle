@@ -43,6 +43,8 @@ void ATileGrid::BeginPlay()
 
 void ATileGrid::TransitionToState(ETileGridState NewState)
 {
+	UE_LOG(LogTemp, Warning, TEXT("TransitionToState: %s to %s"), *UEnum::GetValueAsString(CurrentState),
+	       *UEnum::GetValueAsString(NewState));
 	CurrentState = NewState;
 }
 
@@ -55,14 +57,44 @@ void ATileGrid::Tick(float DeltaSeconds)
 	case ETileGridState::Idle:
 		break;
 	case ETileGridState::CheckingForRepeated:
+		// CheckingForPossibleTiles 에서 왔을 때를 대비하여, RepeatedTilesSet 이 비어 있을때만 검사를 진행한다.
+		if (RepeatedTilesSet.IsEmpty())
+		{
+			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
+		}
+		if (RepeatedTilesSet.IsEmpty())
+		{
+			TransitionToState(ETileGridState::Idle);
+		}
+		else
+		{
+			TransitionToState(ETileGridState::RemovingMatches);
+		}
 		break;
 	case ETileGridState::RemovingMatches:
+		RemoveRepeatedTiles();
+		TransitionToState(ETileGridState::CheckAllTilesToMoveAndDropTiles);
 		break;
-	case ETileGridState::GeneratingNewTiles:
+	case ETileGridState::CheckAllTilesToMoveAndDropTiles:
+		MoveTilesDown();
+		GenerateNewTiles();
+		TransitionToState(ETileGridState::WaitUntilAllTilesStopMoving);
 		break;
-	case ETileGridState::DroppingTiles:
+	case ETileGridState::WaitUntilAllTilesStopMoving:
+		if (MovingTilesCounter.GetValue() <= 0)
+		{
+			TransitionToState(ETileGridState::CheckingForPossibleTiles);
+		}
 		break;
 	case ETileGridState::CheckingForPossibleTiles:
+		CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
+		if (RepeatedTilesSet.IsEmpty())
+		{
+		}
+		else
+		{
+			TransitionToState(ETileGridState::CheckingForRepeated);
+		}
 		break;
 	default:
 		break;
@@ -97,6 +129,19 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 {
 	if (Row >= 0 && Row < GridHeight && Col >= 0 && Col < GridWidth)
 	{
+		if (Tile != nullptr)
+		{
+			Tile->SetTargetLocation(GetTileLocation(Row, Col));
+			Tile->SetMoving(true);
+			MovingTilesCounter.Increment();
+
+			UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
+			       MovingTilesCounter.GetValue());
+
+			// Todo: Tile 에 delegate binding 진행 (OnTileStoppedMoving)
+			Tile->OnTileStopMovingDelegate.Clear();
+			Tile->OnTileStopMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStoppedMoving);
+		}
 		TileArray[Row * GridWidth + Col] = Tile;
 	}
 }
@@ -147,9 +192,9 @@ FVector ATileGrid::GetTileLocation(int32 Row, int32 Col) const
 	// box extent 설정
 	FVector Position;
 	// set x position by Tilesize and x, y
-	// Position.X = - GridWidth * TileSize / 2 + TileSize / 2 + x * TileSize / 2;
 	Position.X = (GridWidth - 1 - 2 * Col) * TileSize / 2;
 	Position.Y = (GridHeight - 1 - 2 * Row) * TileSize / 2;
+	Position.Z = 0.0f;
 
 	return Position;
 }
@@ -237,4 +282,78 @@ void ATileGrid::CheckRepeatedTiles(TArray<int32>& NumOfRepeatedTiles, TSet<ATile
 			Row = EndRow;
 		}
 	}
+}
+
+void ATileGrid::RemoveRepeatedTiles()
+{
+	for (ATile* Tile : RepeatedTilesSet)
+	{
+		if (Tile)
+		{
+			int32 Index = TileArray.IndexOfByKey(Tile);
+			if (Index != INDEX_NONE)
+			{
+				TileArray[Index] = nullptr;
+			}
+		}
+		Tile->DestoryAndSpawnEmitter();
+	}
+	RepeatedTilesSet.Empty();
+}
+
+void ATileGrid::MoveTilesDown()
+{
+	for (int32 Col = 0; Col < GridWidth; Col++)
+	{
+		for (int32 Row = GridHeight - 1; Row >= 0; Row--)
+		{
+			ATile* CurrentTile = GetTileAt(Row, Col);
+			if (CurrentTile == nullptr)
+			{
+				for (int32 AboveRow = Row - 1; AboveRow >= 0; AboveRow--)
+				{
+					ATile* AboveTile = GetTileAt(AboveRow, Col);
+					if (AboveTile != nullptr)
+					{
+						UE_LOG(LogTemp, Log, TEXT("Moving tile from Row: %d, Col: %d to Row: %d, Col: %d"), AboveRow,
+						       Col, Row, Col);
+						SetTileAt(Row, Col, AboveTile);
+						SetTileAt(AboveRow, Col, nullptr);
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+void ATileGrid::GenerateNewTiles()
+{
+	for (int32 Col = 0; Col < GridWidth; Col++)
+	{
+		int32 EmptyCount = 0;
+		for (int32 Row = 0; Row < GridHeight; Row++)
+		{
+			if (GetTileAt(Row, Col) != nullptr)
+			{
+				break;
+			}
+			EmptyCount++;
+		}
+
+		for (int32 i = 0; i < EmptyCount; i++)
+		{
+			ATile* NewTile = SpawnAndInitializeTile(GridHeight - 1, Col);
+			NewTile->SetActorLocation(GetTileLocation(-i - 1, Col));
+
+			SetTileAt(EmptyCount - 1 - i, Col, NewTile);
+			UE_LOG(LogTemp, Log, TEXT("Spawned new tile at Row: %d, Col: %d"), EmptyCount - 1 - i, Col);
+		}
+	}
+}
+
+void ATileGrid::OnTileStoppedMoving()
+{
+	MovingTilesCounter.Decrement();
+	UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }

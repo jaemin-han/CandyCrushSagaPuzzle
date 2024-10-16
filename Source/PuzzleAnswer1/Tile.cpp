@@ -22,6 +22,26 @@ void ATile::BeginPlay()
 	TileType = GetTileType();
 }
 
+void ATile::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (bIsMoving)
+	{
+		FVector CurrentLocation = GetActorLocation();
+		FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaSeconds, 5.0f);
+		SetActorLocation(NewLocation);
+
+		// if (FVector::Dist(NewLocation, TargetLocation) < KINDA_SMALL_NUMBER)
+		if (FVector::Dist(NewLocation, TargetLocation) < 10.0f)
+		{
+			SetActorLocation(TargetLocation);
+			bIsMoving = false;
+			OnTileStopMovingDelegate.Broadcast();
+		}
+	}
+}
+
 bool ATile::IsMatching(const ATile* OtherTile) const
 {
 	return this->TileType == OtherTile->TileType;
@@ -49,4 +69,22 @@ FName ATile::GetTileType() const
 		return FName("White");
 	}
 	return FName("White");
+}
+
+void ATile::DestoryAndSpawnEmitter()
+{
+	Destroy();
+	// Spawn Effect On this Part
+
+	// // // // // 
+}
+
+void ATile::SetMoving(bool IsMoving)
+{
+	bIsMoving = IsMoving;
+}
+
+void ATile::SetTargetLocation(FVector NewTargetLocation)
+{
+	TargetLocation = NewTargetLocation;
 }
