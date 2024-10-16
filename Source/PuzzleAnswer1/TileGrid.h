@@ -8,6 +8,17 @@
 
 class ATile;
 
+UENUM(BlueprintType)
+enum class ETileGridState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+	CheckingForRepeated UMETA(DisplayName = "Checking For Repeated"),
+	RemovingMatches UMETA(DisplayName = "Removing Matches"),
+	GeneratingNewTiles UMETA(DisplayName = "Generating New Tiles"),
+	DroppingTiles UMETA(DisplayName = "Dropping Tiles"),
+	CheckingForPossibleTiles UMETA(DisplayName = "Checking For Possible Tiles"),
+};
+
 UCLASS()
 class PUZZLEANSWER1_API ATileGrid : public AActor
 {
@@ -20,6 +31,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 public:
 	// grid width, height
@@ -39,6 +51,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	TArray<ATile*> TileArray;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
+	ETileGridState CurrentState;
+	// Transition Grid State Function
+	UFUNCTION(BlueprintCallable, Category = "State")
+	void TransitionToState(ETileGridState NewState);
+	// Tick 에서 CurrentState 체크
 
 	// grid initialize
 	void InitializeGrid();

@@ -19,6 +19,7 @@ ATileGrid::ATileGrid()
 	TileArray.SetNum(GridWidth * GridHeight);
 	Materials.SetNum(4);
 	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth : GridHeight);
+	CurrentState = ETileGridState::Idle;
 }
 
 void ATileGrid::BeginPlay()
@@ -26,7 +27,7 @@ void ATileGrid::BeginPlay()
 	Super::BeginPlay();
 
 	InitializeGrid();
-	CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
+	TransitionToState(ETileGridState::CheckingForRepeated);
 
 	// 디버깅을 위해 RepeatedTilesSet의 모든 ATile 위치에 DebugCircle 생성
 	for (ATile* Tile : RepeatedTilesSet)
@@ -37,6 +38,34 @@ void ATileGrid::BeginPlay()
 			TileLocation.Z += 200;
 			DrawDebugSphere(GetWorld(), TileLocation, 20.0f, 12, FColor::Black, false, 360.0f); // 5초 동안 유지
 		}
+	}
+}
+
+void ATileGrid::TransitionToState(ETileGridState NewState)
+{
+	CurrentState = NewState;
+}
+
+void ATileGrid::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	switch (CurrentState)
+	{
+	case ETileGridState::Idle:
+		break;
+	case ETileGridState::CheckingForRepeated:
+		break;
+	case ETileGridState::RemovingMatches:
+		break;
+	case ETileGridState::GeneratingNewTiles:
+		break;
+	case ETileGridState::DroppingTiles:
+		break;
+	case ETileGridState::CheckingForPossibleTiles:
+		break;
+	default:
+		break;
 	}
 }
 
