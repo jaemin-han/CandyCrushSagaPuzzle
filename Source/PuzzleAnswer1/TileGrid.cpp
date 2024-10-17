@@ -14,11 +14,12 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	GridWidth = 8;
-	GridHeight = 8;
+	GridWidth = 6;
+	GridHeight = 6;
 	TileArray.SetNum(GridWidth * GridHeight);
 	Materials.SetNum(4);
-	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth : GridHeight);
+	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
+	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth + 1 : GridHeight + 1);
 	CurrentState = ETileGridState::Idle;
 }
 
@@ -64,7 +65,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		}
 		if (RepeatedTilesSet.IsEmpty())
 		{
-			TransitionToState(ETileGridState::Idle);
+			TransitionToState(ETileGridState::CheckingForPossibleTiles);
 		}
 		else
 		{
@@ -83,18 +84,30 @@ void ATileGrid::Tick(float DeltaSeconds)
 	case ETileGridState::WaitUntilAllTilesStopMoving:
 		if (MovingTilesCounter.GetValue() <= 0)
 		{
-			TransitionToState(ETileGridState::CheckingForPossibleTiles);
+			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
+			if (RepeatedTilesSet.IsEmpty())
+			{
+				TransitionToState(ETileGridState::CheckingForPossibleTiles);
+			}
+			else
+			{
+				TransitionToState(ETileGridState::CheckingForRepeated);
+			}
 		}
 		break;
 	case ETileGridState::CheckingForPossibleTiles:
-		CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
-		if (RepeatedTilesSet.IsEmpty())
+		SetValidTilePairs();
+		DebugValidTilePairs();
+		if (ValidTilePairs.IsEmpty())
 		{
+			TransitionToState(ETileGridState::GameOver);
 		}
 		else
 		{
-			TransitionToState(ETileGridState::CheckingForRepeated);
+			TransitionToState(ETileGridState::Idle);
 		}
+		break;
+	case ETileGridState::GameOver:
 		break;
 	default:
 		break;
@@ -356,4 +369,153 @@ void ATileGrid::OnTileStoppedMoving()
 {
 	MovingTilesCounter.Decrement();
 	UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
+}
+
+void ATileGrid::DebugValidTilePairs()
+{
+	for (const FTilePair& Pair : ValidTilePairs)
+	{
+		if (Pair.First && Pair.Second) // 유효한 포인터인지 확인
+		{
+			FVector Start = Pair.First->GetActorLocation();
+			FVector End = Pair.Second->GetActorLocation();
+
+			Start.Z += 100.0;
+			End.Z += 100.0;
+			// 디버그 라인 그리기 (120초 동안 유지, 흰색)
+			DrawDebugLine(GetWorld(), Start, End, FColor::White, false, 120.0f, 0, 5.0f);
+
+			// 로그로 출력 (디버깅 용도)
+			UE_LOG(LogTemp, Log, TEXT("Drawing line between %s and %s"),
+			       *Pair.First->GetName(), *Pair.Second->GetName());
+		}
+	}
+}
+
+void ATileGrid::SetValidTilePairs()
+{
+	// XOOX 가로
+	for (int32 Row = 0; Row < GridHeight; Row++)
+	{
+		// 길이가 2를 구하니까
+		for (int32 Col = 0; Col < GridWidth - 1; Col++)
+		{
+			ATile* FirstTile = GetTileAt(Row, Col);
+			ATile* SecondTile = GetTileAt(Row, Col + 1);
+
+			FName TileType = FirstTile->TileType;
+			if (TileType != SecondTile->TileType)
+				continue;
+
+			// 왼쪽 타일 기준으로 위, 왼, 아래 타일을 검사한다
+			CheckLeftTile(Row, Col - 1, TileType);
+			CheckUpTile(Row, Col - 1, TileType);
+			CheckDownTile(Row, Col - 1, TileType);
+
+			// 오른쪽 타일 기준으로 위, 오, 아래 타일을 검사한다
+			CheckUpTile(Row, Col + 2, TileType);
+			CheckRightTile(Row, Col + 2, TileType);
+			CheckDownTile(Row, Col + 2, TileType);
+		}
+	}
+
+	// XOOX 세로
+	for (int32 Col = 0; Col < GridWidth; Col++)
+	{
+		for (int32 Row = 0; Row < GridHeight - 1; Row++)
+		{
+			ATile* FirstTile = GetTileAt(Row, Col);
+			ATile* SecondTile = GetTileAt(Row + 1, Col);
+			FName TileType = FirstTile->TileType;
+
+			if (TileType != SecondTile->TileType)
+				continue;
+
+			// 위쪽 타일을 기준으로 왼, 위, 오른 타일을 검사한다
+			CheckLeftTile(Row - 1, Col, TileType);
+			CheckUpTile(Row - 1, Col, TileType);
+			CheckRightTile(Row - 1, Col, TileType);
+
+			// 아래쪽 타일을 기준으로 왼, 아래, 오른 타일을 검사한다
+			CheckLeftTile(Row + 2, Col, TileType);
+			CheckDownTile(Row + 2, Col, TileType);
+			CheckRightTile(Row + 2, Col, TileType);
+		}
+	}
+
+	// OXO 가로
+	for (int32 Row = 0; Row < GridHeight; Row++)
+	{
+		for (int32 Col = 0; Col < GridWidth - 2; Col++)
+		{
+			ATile* FirstTile = GetTileAt(Row, Col);
+			ATile* ThirdTile = GetTileAt(Row, Col + 2);
+			FName TileType = FirstTile->TileType;
+
+			if (TileType != ThirdTile->TileType)
+				continue;
+
+			// 중간 타일을 기준으로 위, 아래 타일을 검사한다
+			CheckUpTile(Row, Col + 1, TileType);
+			CheckDownTile(Row, Col + 1, TileType);
+		}
+	}
+
+	// OXO 세로
+	for (int32 Col = 0; Col < GridWidth; Col++)
+	{
+		for (int32 Row = 0; Row < GridHeight - 2; Row++)
+		{
+			ATile* FirstTile = GetTileAt(Row, Col);
+			ATile* ThirdTile = GetTileAt(Row + 2, Col);
+			FName TileType = FirstTile->TileType;
+
+			if (TileType != ThirdTile->TileType)
+				continue;
+
+			// 중간 타일을 기준으로 왼, 오른 타일을 검사한다
+			CheckLeftTile(Row + 1, Col, TileType);
+			CheckRightTile(Row + 1, Col, TileType);
+		}
+	}
+}
+
+void ATileGrid::CheckLeftTile(int32 Row, int32 Col, FName TileType)
+{
+	ATile* CurTile = GetTileAt(Row, Col);
+	ATile* LeftTile = GetTileAt(Row, Col - 1);
+	if (CurTile && LeftTile && LeftTile->TileType == TileType)
+	{
+		ValidTilePairs.Add(FTilePair(CurTile, LeftTile));
+	}
+}
+
+void ATileGrid::CheckRightTile(int32 Row, int32 Col, FName TileType)
+{
+	ATile* CurTile = GetTileAt(Row, Col);
+	ATile* RightTile = GetTileAt(Row, Col + 1);
+	if (CurTile && RightTile && RightTile->TileType == TileType)
+	{
+		ValidTilePairs.Add(FTilePair(CurTile, RightTile));
+	}
+}
+
+void ATileGrid::CheckUpTile(int32 Row, int32 Col, FName TileType)
+{
+	ATile* CurTile = GetTileAt(Row, Col);
+	ATile* UpTile = GetTileAt(Row - 1, Col);
+	if (CurTile && UpTile && UpTile->TileType == TileType)
+	{
+		ValidTilePairs.Add(FTilePair(CurTile, UpTile));
+	}
+}
+
+void ATileGrid::CheckDownTile(int32 Row, int32 Col, FName TileType)
+{
+	ATile* CurTile = GetTileAt(Row, Col);
+	ATile* DownTile = GetTileAt(Row + 1, Col);
+	if (CurTile && DownTile && DownTile->TileType == TileType)
+	{
+		ValidTilePairs.Add(FTilePair(CurTile, DownTile));
+	}
 }

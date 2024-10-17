@@ -8,6 +8,45 @@
 
 class ATile;
 
+USTRUCT(BlueprintType)
+struct FTilePair
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ATile* First;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ATile* Second;
+
+	// 생성자: 항상 작은 주소를 First에, 큰 주소를 Second에 저장
+	FTilePair(ATile* A = nullptr, ATile* B = nullptr)
+	{
+		if (A < B)
+		{
+			First = A;
+			Second = B;
+		}
+		else
+		{
+			First = B;
+			Second = A;
+		}
+	}
+
+	// 연산자 오버로딩: 같은 쌍인지 비교
+	bool operator==(const FTilePair& Other) const
+	{
+		return First == Other.First && Second == Other.Second;
+	}
+
+	// 해시 함수 정의 (TSet에서 사용됨)
+	friend uint32 GetTypeHash(const FTilePair& Pair)
+	{
+		return HashCombine(GetTypeHash(Pair.First), GetTypeHash(Pair.Second));
+	}
+};
+
 UENUM(BlueprintType)
 enum class ETileGridState : uint8
 {
@@ -17,6 +56,7 @@ enum class ETileGridState : uint8
 	CheckAllTilesToMoveAndDropTiles UMETA(DisplayName = "Generating New Tiles"),
 	WaitUntilAllTilesStopMoving UMETA(DisplayName = "Wait Until All Tiles Stop Moving"),
 	CheckingForPossibleTiles UMETA(DisplayName = "Checking For Possible Tiles"),
+	GameOver UMETA(DisplayName = "Game Over"),
 };
 
 UCLASS()
@@ -24,11 +64,10 @@ class PUZZLEANSWER1_API ATileGrid : public AActor
 {
 	GENERATED_BODY()
 
-
 public:
 	// Sets default values for this actor's properties
 	ATileGrid();
-	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -88,5 +127,16 @@ public:
 	FThreadSafeCounter MovingTilesCounter;
 	UFUNCTION()
 	void OnTileStoppedMoving();
-};
 
+	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Tile Grid")
+	TSet<FTilePair> ValidTilePairs;
+	void DebugValidTilePairs();
+
+	// get valid tile pairs in XOOX, OXO case
+	void SetValidTilePairs();
+	// SetValidTilePairs 내부에서 사용할 함수들, 하나의 방향씩을 담당한다.
+	void CheckLeftTile(int32 Row, int32 Col, FName TileType);
+	void CheckRightTile(int32 Row, int32 Col, FName TileType);
+	void CheckUpTile(int32 Row, int32 Col, FName TileType);
+	void CheckDownTile(int32 Row, int32 Col, FName TileType);
+};
