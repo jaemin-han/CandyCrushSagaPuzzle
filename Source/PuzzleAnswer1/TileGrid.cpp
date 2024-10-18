@@ -126,7 +126,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		break;
 	case ETileGridState::CheckingForPossibleTiles:
 		SetValidTilePairs();
-		DebugValidTilePairs();
+		// DebugValidTilePairs();
 		if (ValidTilePairs.IsEmpty())
 		{
 			TransitionToState(ETileGridState::GameOver);
