@@ -7,7 +7,10 @@
 #include "Tile.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStopMovingDelegate);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStartMovingDelegate);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTileClicked, ATile*, ClickedTile);
 
 UCLASS()
 class PUZZLEANSWER1_API ATile : public AActor
@@ -48,4 +51,17 @@ public:
 	void StartMoving();
 	void StopMoving();
 
+	virtual void NotifyActorOnClicked(FKey ButtonPressed) override;
+
+	FOnTileClicked OnTileClicked;
+
+private:
+	int32 Row;
+	int32 Col;
+
+public:
+	void SetRow(const int32 NewRow) { Row = NewRow; };
+	void SetCol(const int32 NewCol) { Col = NewCol; };
+	int32 GetRow() const { return Row; };
+	int32 GetCol() const { return Col; };
 };

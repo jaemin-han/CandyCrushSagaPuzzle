@@ -9,7 +9,7 @@ class ATile;
 /**
  * 
  */
-class PUZZLEANSWER1_API SwapTilesCommand: public ICommand
+class PUZZLEANSWER1_API SwapTilesCommand : public ICommand
 {
 public:
 	SwapTilesCommand();

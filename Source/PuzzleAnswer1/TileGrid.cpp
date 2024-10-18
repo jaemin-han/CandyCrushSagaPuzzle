@@ -6,6 +6,8 @@
 #include "Tile.h"
 #include "Async/ParallelFor.h"
 #include "Async/Async.h"
+#include "CommandPattern/SwapTilesCommand.h"
+#include "CommandPattern/TileCommandInvocker.h"
 
 
 // Sets default values
@@ -14,13 +16,15 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	GridWidth = 6;
-	GridHeight = 6;
+	GridWidth = 4;
+	GridHeight = 4;
 	TileArray.SetNum(GridWidth * GridHeight);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
 	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth + 1 : GridHeight + 1);
 	CurrentState = ETileGridState::Idle;
+
+	Invocker = CreateDefaultSubobject<UTileCommandInvocker>(TEXT("Invocker"));
 }
 
 void ATileGrid::BeginPlay()
@@ -56,6 +60,31 @@ void ATileGrid::Tick(float DeltaSeconds)
 	switch (CurrentState)
 	{
 	case ETileGridState::Idle:
+		if (IsValid(FirstClickedTile) && IsValid(SecondClickedTile))
+		{
+			ICommand* Command = new SwapTilesCommand(FirstClickedTile, SecondClickedTile);
+			Invocker->ExecuteCommand(Command);
+			TransitionToState(ETileGridState::SwapCheck);
+		}
+		break;
+	case ETileGridState::SwapCheck:
+		if (MovingTilesCounter.GetValue() <= 0)
+		{
+			FTilePair TilePair(FirstClickedTile, SecondClickedTile);
+			if (ValidTilePairs.Contains(TilePair))
+			{
+				SwapClickedTileOnTileArray(FirstClickedTile, SecondClickedTile);
+				TransitionToState(ETileGridState::CheckingForRepeated);
+				ValidTilePairs.Empty();
+			}
+			else
+			{
+				Invocker->UndoLastCommand();
+				TransitionToState(ETileGridState::Idle);
+			}
+			FirstClickedTile = nullptr;
+			SecondClickedTile = nullptr;
+		}
 		break;
 	case ETileGridState::CheckingForRepeated:
 		// CheckingForPossibleTiles 에서 왔을 때를 대비하여, RepeatedTilesSet 이 비어 있을때만 검사를 진행한다.
@@ -145,6 +174,9 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 		if (Tile != nullptr)
 		{
 			Tile->SetTargetLocation(GetTileLocation(Row, Col));
+			Tile->SetRow(Row);
+			Tile->SetCol(Col);
+
 			Tile->OnTileStartMovingDelegate.Clear();
 			Tile->OnTileStartMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStartedMoving);
 			Tile->StartMoving();
@@ -165,6 +197,9 @@ ATile* ATileGrid::SpawnAndInitializeTile(int32 Row, int32 Col)
 	// box extent 설정
 	const FVector Position = GetTileLocation(Row, Col);
 	ATile* NewTile = GetWorld()->SpawnActor<ATile>(TileClass, Position, FRotator());
+
+	// Click 관련 delegate 에 연결
+	NewTile->OnTileClicked.AddDynamic(this, &ATileGrid::HandleOnTileClicked);
 
 	// material 설정
 
@@ -389,8 +424,8 @@ void ATileGrid::DebugValidTilePairs()
 
 			Start.Z += 100.0;
 			End.Z += 100.0;
-			// 디버그 라인 그리기 (120초 동안 유지, 흰색)
-			DrawDebugLine(GetWorld(), Start, End, FColor::White, false, 120.0f, 0, 5.0f);
+			// 디버그 라인 그리기 (2초 동안 유지, 흰색)
+			DrawDebugLine(GetWorld(), Start, End, FColor::White, false, 2.0f, 0, 5.0f);
 
 			// 로그로 출력 (디버깅 용도)
 			UE_LOG(LogTemp, Log, TEXT("Drawing line between %s and %s"),
@@ -525,4 +560,47 @@ void ATileGrid::CheckDownTile(int32 Row, int32 Col, FName TileType)
 	{
 		ValidTilePairs.Add(FTilePair(CurTile, DownTile));
 	}
+}
+
+void ATileGrid::HandleOnTileClicked(ATile* ClickedTile)
+{
+	// Idle 상태에서만 클릭 입력을 받을 수 있다.
+	if (CurrentState != ETileGridState::Idle)
+		return;
+
+	if (FirstClickedTile == nullptr)
+	{
+		FirstClickedTile = ClickedTile;
+	}
+	else if (SecondClickedTile == nullptr && ClickedTile != FirstClickedTile)
+	{
+		int32 FirstRow = FirstClickedTile->GetRow();
+		int32 FirstCol = FirstClickedTile->GetCol();
+
+		int32 SecondRow = ClickedTile->GetRow();
+		int32 SecondCol = ClickedTile->GetCol();
+
+		// FirstTile 의 상하좌우 타일만 선택 가능
+		if ((FMath::Abs(SecondRow - FirstRow) == 1 && SecondCol == FirstCol) ||
+			(FMath::Abs(SecondCol - FirstCol) == 1 && SecondRow == FirstRow))
+		{
+			SecondClickedTile = ClickedTile;
+		}
+	}
+	else
+	{
+		// 둘 다 nullptr 이 아닌데 이 함수가 실해되는 일이 없게 할 것.
+	}
+}
+
+void ATileGrid::SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile)
+{
+	int32 FirstRow = FirstTile->GetRow();
+	int32 FirstCol = FirstTile->GetCol();
+
+	int32 SecondRow = SecondTile->GetRow();
+	int32 SecondCol = SecondTile->GetCol();
+
+	SetTileAt(FirstRow, FirstCol, SecondTile);
+	SetTileAt(SecondRow, SecondCol, FirstTile);
 }

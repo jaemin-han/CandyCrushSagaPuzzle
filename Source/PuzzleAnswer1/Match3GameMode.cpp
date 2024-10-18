@@ -20,9 +20,13 @@ void AMatch3GameMode::BeginPlay()
 
 	ATileGrid* TileGrid = GetWorld()->SpawnActor<ATileGrid>(TileGridClass);
 
-	auto* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	
+	// auto* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	auto* PlayerController = GetWorld()->GetFirstPlayerController();
 	PlayerController->SetShowMouseCursor(true);
 	PlayerController->bEnableClickEvents = true;
 	PlayerController->SetInputMode(FInputModeGameAndUI());
+	EnableInput(PlayerController);
+
 
 }

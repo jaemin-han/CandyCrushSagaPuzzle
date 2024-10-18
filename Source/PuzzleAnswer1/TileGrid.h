@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Tile.h"
 #include "GameFramework/Actor.h"
 #include "TileGrid.generated.h"
 
@@ -51,6 +52,7 @@ UENUM(BlueprintType)
 enum class ETileGridState : uint8
 {
 	Idle UMETA(DisplayName = "Idle"),
+	SwapCheck UMETA(DisplayName = "Swap"),
 	CheckingForRepeated UMETA(DisplayName = "Checking For Repeated"),
 	RemovingMatches UMETA(DisplayName = "Removing Matches"),
 	CheckAllTilesToMoveAndDropTiles UMETA(DisplayName = "Generating New Tiles"),
@@ -141,4 +143,15 @@ public:
 	void CheckRightTile(int32 Row, int32 Col, FName TileType);
 	void CheckUpTile(int32 Row, int32 Col, FName TileType);
 	void CheckDownTile(int32 Row, int32 Col, FName TileType);
+
+	UFUNCTION()
+	void HandleOnTileClicked(ATile* ClickedTile);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Command")
+	class UTileCommandInvocker* Invocker;
+
+	ATile* FirstClickedTile;
+	ATile* SecondClickedTile;
+
+	void SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile);
 };

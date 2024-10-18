@@ -94,3 +94,12 @@ void ATile::StopMoving()
 	bIsMoving = false;
 	OnTileStopMovingDelegate.Broadcast();
 }
+
+void ATile::NotifyActorOnClicked(FKey ButtonPressed)
+{
+	Super::NotifyActorOnClicked(ButtonPressed);
+
+	OnTileClicked.Broadcast(this);
+
+	UE_LOG(LogTemp, Warning, TEXT("NotifyActorOnClicked"));
+}
