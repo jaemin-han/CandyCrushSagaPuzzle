@@ -7,6 +7,7 @@
 #include "Tile.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStopMovingDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStartMovingDelegate);
 
 UCLASS()
 class PUZZLEANSWER1_API ATile : public AActor
@@ -38,10 +39,13 @@ public:
 	void DestoryAndSpawnEmitter();
 
 	bool bIsMoving = false;
-	void SetMoving(bool IsMoving);
 	FVector TargetLocation;
 	void SetTargetLocation(FVector NewTargetLocation);
 
 	FOnTileStopMovingDelegate OnTileStopMovingDelegate;
+	FOnTileStartMovingDelegate OnTileStartMovingDelegate;
+
+	void StartMoving();
+	void StopMoving();
 
 };

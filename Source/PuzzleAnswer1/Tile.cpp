@@ -36,8 +36,7 @@ void ATile::Tick(float DeltaSeconds)
 		if (FVector::Dist(NewLocation, TargetLocation) < 10.0f)
 		{
 			SetActorLocation(TargetLocation);
-			bIsMoving = false;
-			OnTileStopMovingDelegate.Broadcast();
+			StopMoving();
 		}
 	}
 }
@@ -79,12 +78,19 @@ void ATile::DestoryAndSpawnEmitter()
 	// // // // // 
 }
 
-void ATile::SetMoving(bool IsMoving)
-{
-	bIsMoving = IsMoving;
-}
-
 void ATile::SetTargetLocation(FVector NewTargetLocation)
 {
 	TargetLocation = NewTargetLocation;
+}
+
+void ATile::StartMoving()
+{
+	bIsMoving = true;
+	OnTileStartMovingDelegate.Broadcast();
+}
+
+void ATile::StopMoving()
+{
+	bIsMoving = false;
+	OnTileStopMovingDelegate.Broadcast();
 }

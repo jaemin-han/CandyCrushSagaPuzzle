@@ -145,8 +145,9 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 		if (Tile != nullptr)
 		{
 			Tile->SetTargetLocation(GetTileLocation(Row, Col));
-			Tile->SetMoving(true);
-			MovingTilesCounter.Increment();
+			Tile->OnTileStartMovingDelegate.Clear();
+			Tile->OnTileStartMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStartedMoving);
+			Tile->StartMoving();
 
 			UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
 			       MovingTilesCounter.GetValue());
@@ -369,6 +370,12 @@ void ATileGrid::OnTileStoppedMoving()
 {
 	MovingTilesCounter.Decrement();
 	UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
+}
+
+void ATileGrid::OnTileStartedMoving()
+{
+	MovingTilesCounter.Increment();
+	UE_LOG(LogTemp, Log, TEXT("A tile started moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }
 
 void ATileGrid::DebugValidTilePairs()

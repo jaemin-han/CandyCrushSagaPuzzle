@@ -127,6 +127,8 @@ public:
 	FThreadSafeCounter MovingTilesCounter;
 	UFUNCTION()
 	void OnTileStoppedMoving();
+	UFUNCTION()
+	void OnTileStartedMoving();
 
 	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	TSet<FTilePair> ValidTilePairs;
