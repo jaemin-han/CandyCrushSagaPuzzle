@@ -19,9 +19,15 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Observer", meta = (AllowPrivateAccess = "true"))
 	int32 CurrentScore;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Observer", meta = (AllowPrivateAccess = "true"))
+	int32 RemainingMoves;
+
 public:
-	virtual void OnNotify(int32 UpdateScore) override;
+	virtual void OnNotify(EGameStateType StateType, int32 UpdateValue) override;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void UpdateScoreUI();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void UpdateRemainingMovesUI();
 };

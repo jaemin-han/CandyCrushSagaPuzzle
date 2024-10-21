@@ -4,7 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "ObserverPattern/Observer.h"
 #include "MyGameInstance.generated.h"
+
+class IObserver;
+
+DECLARE_MULTICAST_DELEGATE(FOnRemainingMovesComestoZero);
 
 /**
  * 
@@ -17,27 +22,34 @@ class PUZZLEANSWER1_API UMyGameInstance : public UGameInstance
 private:
 	UMyGameInstance();
 
-public:
-
-	// 게임에 전체적으로 필요한 변수들
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Observer", meta = (AllowPrivateAccess = "true"))
+	TArray<TScriptInterface<IObserver>> Observers;
 	// player score
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Data")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Data", meta=(AllowPrivateAccess="true"))
 	int32 PlayerScore;
-	
 	// remaining maching number
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Data")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Data", meta=(AllowPrivateAccess="true"))
 	int32 RemainingMoves;
 
-	// 점수 증가 method
-	UFUNCTION(BlueprintCallable, Category = "Game Function")
-	void AddScore(int32 Point);
+public:
 
-	// RemainingMoves 제어
-	UFUNCTION(BlueprintCallable, Category = "Game Function")
-	void DecreaseMoves();
+	void RegisterObserver(TScriptInterface<IObserver> Observer);
+	void UnregisterObserver(TScriptInterface<IObserver> Observer);
+
+	void NotifyObservers(EGameStateType StateType, int32 Value);
+
+	UFUNCTION()
+	void IncreasePlayerScore(int32 Amount);
+	UFUNCTION()
+	void DecreaseRemainingMoves(int32 Amount);
+
+	int32 GetPlayerScore() const {return PlayerScore;};
+	int32 GetRemainingMoves() const {return RemainingMoves;};
 
 	// game state initialize - Retry
 	UFUNCTION(BlueprintCallable, Category = "Game Function")
 	void ResetGameState();
-	
+
+	FOnRemainingMovesComestoZero OnGameOver;
+
 };

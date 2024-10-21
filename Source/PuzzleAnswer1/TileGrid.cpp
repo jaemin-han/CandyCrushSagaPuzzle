@@ -3,6 +3,7 @@
 
 #include "TileGrid.h"
 
+#include "MyGameInstance.h"
 #include "Tile.h"
 #include "Async/ParallelFor.h"
 #include "Async/Async.h"
@@ -16,8 +17,8 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	GridWidth = 4;
-	GridHeight = 4;
+	GridWidth = 6;
+	GridHeight = 6;
 	TileArray.SetNum(GridWidth * GridHeight);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
@@ -25,6 +26,8 @@ ATileGrid::ATileGrid()
 	CurrentState = ETileGridState::Idle;
 
 	Invocker = CreateDefaultSubobject<UTileCommandInvocker>(TEXT("Invocker"));
+
+	bGameOverPending = false;
 }
 
 void ATileGrid::BeginPlay()
@@ -34,15 +37,16 @@ void ATileGrid::BeginPlay()
 	InitializeGrid();
 	TransitionToState(ETileGridState::CheckingForRepeated);
 
-	// 디버깅을 위해 RepeatedTilesSet의 모든 ATile 위치에 DebugCircle 생성
-	for (ATile* Tile : RepeatedTilesSet)
+	UMyGameInstance* MyGameInstance = Cast<UMyGameInstance>(GetGameInstance());
+	if (MyGameInstance)
 	{
-		if (Tile)
+		OnScoreIncreased.AddDynamic(MyGameInstance, &UMyGameInstance::IncreasePlayerScore);
+		OnMovesDecreased.AddDynamic(MyGameInstance, &UMyGameInstance::DecreaseRemainingMoves);
+
+		MyGameInstance->OnGameOver.AddLambda([this]()
 		{
-			FVector TileLocation = Tile->GetActorLocation();
-			TileLocation.Z += 200;
-			DrawDebugSphere(GetWorld(), TileLocation, 20.0f, 12, FColor::Black, false, 360.0f); // 5초 동안 유지
-		}
+			bGameOverPending = true;
+		});
 	}
 }
 
@@ -60,6 +64,11 @@ void ATileGrid::Tick(float DeltaSeconds)
 	switch (CurrentState)
 	{
 	case ETileGridState::Idle:
+		if (bGameOverPending)
+		{
+			TransitionToState(ETileGridState::GameOver);
+		}
+		
 		if (IsValid(FirstClickedTile) && IsValid(SecondClickedTile))
 		{
 			ICommand* Command = new SwapTilesCommand(FirstClickedTile, SecondClickedTile);
@@ -82,6 +91,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 				Invocker->UndoLastCommand();
 				TransitionToState(ETileGridState::Idle);
 			}
+			NotifyMoveDecrease();
 			FirstClickedTile = nullptr;
 			SecondClickedTile = nullptr;
 		}
@@ -103,6 +113,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		break;
 	case ETileGridState::RemovingMatches:
 		RemoveRepeatedTiles();
+		CalculateAndBroadcastScore();
 		TransitionToState(ETileGridState::CheckAllTilesToMoveAndDropTiles);
 		break;
 	case ETileGridState::CheckAllTilesToMoveAndDropTiles:
@@ -126,7 +137,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		break;
 	case ETileGridState::CheckingForPossibleTiles:
 		SetValidTilePairs();
-		// DebugValidTilePairs();
+	// DebugValidTilePairs();
 		if (ValidTilePairs.IsEmpty())
 		{
 			TransitionToState(ETileGridState::GameOver);
@@ -137,6 +148,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		}
 		break;
 	case ETileGridState::GameOver:
+		OnGameOver.Execute();
 		break;
 	default:
 		break;
@@ -603,4 +615,37 @@ void ATileGrid::SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile)
 
 	SetTileAt(FirstRow, FirstCol, SecondTile);
 	SetTileAt(SecondRow, SecondCol, FirstTile);
+}
+
+void ATileGrid::CalculateAndBroadcastScore()
+{
+	int32 TotalScore = 0;
+
+	// NumOfRepeatedTilesArray를 사용해 점수 계산
+	for (int32 i = 3; i < NumOfRepeatedTilesArray.Num(); ++i)
+	{
+		if (NumOfRepeatedTilesArray[i] > 0)
+		{
+			int32 ScoreForThisCombo = i * 10 * NumOfRepeatedTilesArray[i]; // 예: 3개 = 30점, 4개 = 40점 등
+			TotalScore += ScoreForThisCombo;
+			UE_LOG(LogTemp, Log, TEXT("Combo of %d tiles: %d points"), i, ScoreForThisCombo);
+		}
+	}
+
+	// 총 점수를 Delegate로 Broadcast
+	if (TotalScore > 0)
+	{
+		OnScoreIncreased.Broadcast(TotalScore);
+		UE_LOG(LogTemp, Log, TEXT("Total Score Broadcast: %d"), TotalScore);
+	}
+	// reset
+	for (int32& Value: NumOfRepeatedTilesArray)
+	{
+		Value = 0;
+	}
+}
+
+void ATileGrid::NotifyMoveDecrease()
+{
+	OnMovesDecreased.Broadcast(1);
 }

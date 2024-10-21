@@ -3,9 +3,22 @@
 
 #include "GameWidgetObserver.h"
 
-void UGameWidgetObserver::OnNotify(int32 UpdateScore)
-{
-	CurrentScore = UpdateScore;
+#include "PuzzleAnswer1/MyGameInstance.h"
 
-	UpdateScoreUI();
+void UGameWidgetObserver::OnNotify(EGameStateType StateType, int32 UpdateValue)
+{
+	switch (StateType)
+	{
+	case EGameStateType::PlayerScore:
+		CurrentScore = UpdateValue;
+		UpdateScoreUI();
+		break;
+	case EGameStateType::RemainingMoves:
+		RemainingMoves = UpdateValue;
+		UpdateRemainingMovesUI();
+		break;
+
+	default:
+		break;
+	}
 }

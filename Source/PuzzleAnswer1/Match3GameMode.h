@@ -6,6 +6,7 @@
 #include "GameFramework/GameMode.h"
 #include "Match3GameMode.generated.h"
 
+class UGameWidgetObserver;
 class ATileGrid;
 /**
  * 
@@ -20,4 +21,10 @@ class PUZZLEANSWER1_API AMatch3GameMode : public AGameMode
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Class")
 	TSubclassOf<ATileGrid> TileGridClass;
+
+	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> GameWidgetObserverClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> GameOverWidgetClass;
 };

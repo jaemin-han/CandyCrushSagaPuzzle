@@ -9,6 +9,11 @@
 
 class ATile;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScoreIncreased, int32, ScoreAmount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMovesDecreased, int32, MovesAmount);
+
+DECLARE_DELEGATE(FOnGameOver);
+
 USTRUCT(BlueprintType)
 struct FTilePair
 {
@@ -154,4 +159,21 @@ public:
 	ATile* SecondClickedTile;
 
 	void SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile);
+
+	// Delegate 선언
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnScoreIncreased OnScoreIncreased;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnMovesDecreased OnMovesDecreased;
+
+	// 타일 제거 후 호출할 함수 (점수 증가)
+	void CalculateAndBroadcastScore();
+
+	// 움직임 감소 함수 호출
+	void NotifyMoveDecrease();
+
+	bool bGameOverPending;
+
+	FOnGameOver OnGameOver;
 };
