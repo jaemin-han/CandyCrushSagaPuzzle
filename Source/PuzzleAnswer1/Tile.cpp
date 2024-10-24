@@ -70,7 +70,7 @@ FName ATile::GetTileType() const
 	return FName("White");
 }
 
-void ATile::DestoryAndSpawnEmitter()
+void ATile::DestroyAndSpawnEmitter()
 {
 	Destroy();
 	// Spawn Effect On this Part
@@ -102,4 +102,18 @@ void ATile::NotifyActorOnClicked(FKey ButtonPressed)
 	OnTileClicked.Broadcast(this);
 
 	UE_LOG(LogTemp, Warning, TEXT("NotifyActorOnClicked"));
+}
+
+void ATile::SetMaterialEmission(const bool bEmission) const
+{
+	if (bEmission)
+	{
+		CubeMeshComponent->SetRenderCustomDepth(true);
+		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 10.0f);
+	}
+	else
+	{
+		CubeMeshComponent->SetRenderCustomDepth(false);
+		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 0.0f);
+	}
 }

@@ -25,7 +25,7 @@ ATileGrid::ATileGrid()
 	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth + 1 : GridHeight + 1);
 	CurrentState = ETileGridState::Idle;
 
-	Invocker = CreateDefaultSubobject<UTileCommandInvocker>(TEXT("Invocker"));
+	// Invocker = CreateDefaultSubobject<UTileCommandInvocker>(TEXT("Invoker"));
 
 	bGameOverPending = false;
 }
@@ -48,6 +48,8 @@ void ATileGrid::BeginPlay()
 			bGameOverPending = true;
 		});
 	}
+
+	Invocker = NewObject<UTileCommandInvocker>();
 }
 
 void ATileGrid::TransitionToState(ETileGridState NewState)
@@ -68,11 +70,19 @@ void ATileGrid::Tick(float DeltaSeconds)
 		{
 			TransitionToState(ETileGridState::GameOver);
 		}
-		
+
 		if (IsValid(FirstClickedTile) && IsValid(SecondClickedTile))
 		{
-			ICommand* Command = new SwapTilesCommand(FirstClickedTile, SecondClickedTile);
-			Invocker->ExecuteCommand(Command);
+			USwapTilesCommand* Command = NewObject<USwapTilesCommand>();
+			Command->InitializeTiles(FirstClickedTile, SecondClickedTile);
+			if (IsValid(Invocker))
+			{
+				Invocker->ExecuteCommand(Command);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Invocker is invalid"));
+			}
 			TransitionToState(ETileGridState::SwapCheck);
 		}
 		break;
@@ -92,6 +102,8 @@ void ATileGrid::Tick(float DeltaSeconds)
 				TransitionToState(ETileGridState::Idle);
 			}
 			NotifyMoveDecrease();
+			FirstClickedTile->SetMaterialEmission(false);
+			SecondClickedTile->SetMaterialEmission(false);
 			FirstClickedTile = nullptr;
 			SecondClickedTile = nullptr;
 		}
@@ -215,7 +227,7 @@ ATile* ATileGrid::SpawnAndInitializeTile(int32 Row, int32 Col)
 
 	// material 설정
 
-	UMaterial* Material;
+	UMaterialInstance* Material;
 
 	if (NewTile->TileType == "Red")
 	{
@@ -357,7 +369,7 @@ void ATileGrid::RemoveRepeatedTiles()
 				TileArray[Index] = nullptr;
 			}
 		}
-		Tile->DestoryAndSpawnEmitter();
+		Tile->DestroyAndSpawnEmitter();
 	}
 	RepeatedTilesSet.Empty();
 }
@@ -583,6 +595,7 @@ void ATileGrid::HandleOnTileClicked(ATile* ClickedTile)
 	if (FirstClickedTile == nullptr)
 	{
 		FirstClickedTile = ClickedTile;
+		FirstClickedTile->SetMaterialEmission(true);
 	}
 	else if (SecondClickedTile == nullptr && ClickedTile != FirstClickedTile)
 	{
@@ -597,6 +610,7 @@ void ATileGrid::HandleOnTileClicked(ATile* ClickedTile)
 			(FMath::Abs(SecondCol - FirstCol) == 1 && SecondRow == FirstRow))
 		{
 			SecondClickedTile = ClickedTile;
+			SecondClickedTile->SetMaterialEmission(true);
 		}
 	}
 	else
@@ -639,7 +653,7 @@ void ATileGrid::CalculateAndBroadcastScore()
 		UE_LOG(LogTemp, Log, TEXT("Total Score Broadcast: %d"), TotalScore);
 	}
 	// reset
-	for (int32& Value: NumOfRepeatedTilesArray)
+	for (int32& Value : NumOfRepeatedTilesArray)
 	{
 		Value = 0;
 	}

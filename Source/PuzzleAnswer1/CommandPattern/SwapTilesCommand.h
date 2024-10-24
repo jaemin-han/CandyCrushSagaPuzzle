@@ -4,18 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Command.h"
+#include "SwapTilesCommand.generated.h"
 
 class ATile;
 /**
  * 
  */
-class PUZZLEANSWER1_API SwapTilesCommand : public ICommand
+UCLASS()
+class PUZZLEANSWER1_API USwapTilesCommand : public UObject, public ICommand
 {
-public:
-	SwapTilesCommand();
-	~SwapTilesCommand();
+	GENERATED_BODY()
 
-private:
 	ATile* FirstTile;
 	ATile* SecondTile;
 
@@ -23,5 +22,5 @@ public:
 	virtual void Execute() override;
 	virtual void Undo() override;
 
-	SwapTilesCommand(ATile* FirstTile, ATile* SecondTile);
+	void InitializeTiles(ATile* InFirstTile, ATile* InSecondTile);
 };

@@ -6,29 +6,22 @@
 #include "PuzzleAnswer1/Tile.h"
 
 
-SwapTilesCommand::SwapTilesCommand()
-{
-}
-
-SwapTilesCommand::~SwapTilesCommand()
-{
-}
-
-void SwapTilesCommand::Execute()
+void USwapTilesCommand::Execute()
 {
 	Swap(FirstTile->TargetLocation, SecondTile->TargetLocation);
 	FirstTile->StartMoving();
 	SecondTile->StartMoving();
 }
 
-void SwapTilesCommand::Undo()
+void USwapTilesCommand::Undo()
 {
 	Swap(FirstTile->TargetLocation, SecondTile->TargetLocation);
 	FirstTile->StartMoving();
 	SecondTile->StartMoving();
 }
 
-SwapTilesCommand::SwapTilesCommand(ATile* FirstTile, ATile* SecondTile)
-	: FirstTile(FirstTile), SecondTile(SecondTile)
+void USwapTilesCommand::InitializeTiles(ATile* InFirstTile, ATile* InSecondTile)
 {
+	FirstTile = InFirstTile;
+	SecondTile = InSecondTile;
 }

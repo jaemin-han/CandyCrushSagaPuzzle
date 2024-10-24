@@ -90,7 +90,7 @@ public:
 	float TileSize = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
-	TArray<UMaterial*> Materials;
+	TArray<UMaterialInstance*> Materials;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	TSubclassOf<ATile> TileClass;

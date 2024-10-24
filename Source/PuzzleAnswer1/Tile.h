@@ -39,7 +39,7 @@ public:
 
 	FName GetTileType() const;
 
-	void DestoryAndSpawnEmitter();
+	void DestroyAndSpawnEmitter();
 
 	bool bIsMoving = false;
 	FVector TargetLocation;
@@ -64,4 +64,6 @@ public:
 	void SetCol(const int32 NewCol) { Col = NewCol; };
 	int32 GetRow() const { return Row; };
 	int32 GetCol() const { return Col; };
+
+	void SetMaterialEmission(bool bEmission) const;
 };
