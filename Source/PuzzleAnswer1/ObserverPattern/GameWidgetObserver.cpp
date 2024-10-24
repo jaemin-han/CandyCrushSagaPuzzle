@@ -13,6 +13,7 @@ void UGameWidgetObserver::OnNotify(EGameStateType StateType, int32 UpdateValue)
 		CurrentScore = UpdateValue;
 		UpdateScoreUI();
 		break;
+
 	case EGameStateType::RemainingMoves:
 		RemainingMoves = UpdateValue;
 		UpdateRemainingMovesUI();

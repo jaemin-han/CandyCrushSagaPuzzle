@@ -23,7 +23,7 @@ void UMyGameInstance::UnregisterObserver(TScriptInterface<IObserver> Observer)
 
 void UMyGameInstance::NotifyObservers(EGameStateType StateType, int32 Value)
 {
-	for (auto Observer : Observers)
+	for (const auto& Observer : Observers)
 	{
 		if (Observer.GetObject() && Observer.GetObject()->GetClass()->ImplementsInterface(UObserver::StaticClass()))
 		{
@@ -42,6 +42,7 @@ void UMyGameInstance::DecreaseRemainingMoves(int32 Amount)
 {
 	RemainingMoves -= Amount;
 	NotifyObservers(EGameStateType::RemainingMoves, RemainingMoves);
+	
 	if (RemainingMoves <= 0)
 		OnGameOver.Broadcast();
 }
@@ -49,7 +50,7 @@ void UMyGameInstance::DecreaseRemainingMoves(int32 Amount)
 void UMyGameInstance::ResetGameState()
 {
 	PlayerScore = 0;
-	RemainingMoves = 3;
+	RemainingMoves = 30;
 
 	// Widget 에 처음에 반영하기 위해서 수행함
 	IncreasePlayerScore(0);

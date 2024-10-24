@@ -155,7 +155,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Command")
 	class UTileCommandInvocker* Invocker;
 
+	UPROPERTY()
 	ATile* FirstClickedTile;
+	UPROPERTY()
 	ATile* SecondClickedTile;
 
 	void SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile);
