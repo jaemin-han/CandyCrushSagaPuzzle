@@ -1,17 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "TileCommandInvocker.h"
+#include "TileCommandInvoker.h"
 
 #include "Command.h"
 
-void UTileCommandInvocker::ExecuteCommand(ICommand* Command)
+void UTileCommandInvoker::ExecuteCommand(ICommand* Command)
 {
 	Command->Execute();
 	CommandHistory.Push(Command);
 }
 
-void UTileCommandInvocker::UndoLastCommand()
+void UTileCommandInvoker::UndoLastCommand()
 {
 	if (!CommandHistory.IsEmpty())
 	{

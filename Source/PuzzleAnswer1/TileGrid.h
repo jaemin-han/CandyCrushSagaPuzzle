@@ -153,7 +153,7 @@ public:
 	void HandleOnTileClicked(ATile* ClickedTile);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Command")
-	class UTileCommandInvocker* Invocker;
+	class UTileCommandInvoker* Invoker;
 
 	UPROPERTY()
 	ATile* FirstClickedTile;

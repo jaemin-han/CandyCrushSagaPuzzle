@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "TileCommandInvocker.generated.h"
+#include "TileCommandInvoker.generated.h"
 
 class ICommand;
 /**
  * 
  */
 UCLASS()
-class PUZZLEANSWER1_API UTileCommandInvocker : public UObject
+class PUZZLEANSWER1_API UTileCommandInvoker : public UObject
 {
 	GENERATED_BODY()
 

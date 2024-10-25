@@ -8,7 +8,7 @@
 #include "Async/ParallelFor.h"
 #include "Async/Async.h"
 #include "CommandPattern/SwapTilesCommand.h"
-#include "CommandPattern/TileCommandInvocker.h"
+#include "CommandPattern/TileCommandInvoker.h"
 
 
 // Sets default values
@@ -24,8 +24,6 @@ ATileGrid::ATileGrid()
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
 	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth + 1 : GridHeight + 1);
 	CurrentState = ETileGridState::Idle;
-
-	// Invocker = CreateDefaultSubobject<UTileCommandInvocker>(TEXT("Invoker"));
 
 	bGameOverPending = false;
 }
@@ -49,7 +47,7 @@ void ATileGrid::BeginPlay()
 		});
 	}
 
-	Invocker = NewObject<UTileCommandInvocker>();
+	Invoker = NewObject<UTileCommandInvoker>();
 }
 
 void ATileGrid::TransitionToState(ETileGridState NewState)
@@ -75,9 +73,9 @@ void ATileGrid::Tick(float DeltaSeconds)
 		{
 			USwapTilesCommand* Command = NewObject<USwapTilesCommand>();
 			Command->InitializeTiles(FirstClickedTile, SecondClickedTile);
-			if (IsValid(Invocker))
+			if (IsValid(Invoker))
 			{
-				Invocker->ExecuteCommand(Command);
+				Invoker->ExecuteCommand(Command);
 			}
 			else
 			{
@@ -98,7 +96,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 			}
 			else
 			{
-				Invocker->UndoLastCommand();
+				Invoker->UndoLastCommand();
 				TransitionToState(ETileGridState::Idle);
 			}
 			NotifyMoveDecrease();
