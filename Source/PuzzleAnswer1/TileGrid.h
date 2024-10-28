@@ -10,6 +10,7 @@
 class ATile;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScoreIncreased, int32, ScoreAmount);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMovesDecreased, int32, MovesAmount);
 
 DECLARE_DELEGATE(FOnGameOver);
@@ -82,9 +83,9 @@ protected:
 public:
 	// grid width, height
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
-	int32 GridWidth;
+	int32 NumColumns;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
-	int32 GridHeight;
+	int32 NumRows;
 	// tile 의 cube mesh 를 뭘 고르느냐에 따라 일일이 수정해야 합니다
 	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	float TileSize = 100.0f;

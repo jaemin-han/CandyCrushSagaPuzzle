@@ -17,12 +17,12 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	GridWidth = 6;
-	GridHeight = 6;
-	TileArray.SetNum(GridWidth * GridHeight);
+	NumColumns = 8;
+	NumRows = 3;
+	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
-	NumOfRepeatedTilesArray.SetNum(GridWidth > GridHeight ? GridWidth + 1 : GridHeight + 1);
+	NumOfRepeatedTilesArray.SetNum(NumColumns > NumRows ? NumColumns + 1 : NumRows + 1);
 	CurrentState = ETileGridState::Idle;
 
 	bGameOverPending = false;
@@ -35,8 +35,7 @@ void ATileGrid::BeginPlay()
 	InitializeGrid();
 	TransitionToState(ETileGridState::CheckingForRepeated);
 
-	UMyGameInstance* MyGameInstance = Cast<UMyGameInstance>(GetGameInstance());
-	if (MyGameInstance)
+	if (UMyGameInstance* MyGameInstance = Cast<UMyGameInstance>(GetGameInstance()))
 	{
 		OnScoreIncreased.AddDynamic(MyGameInstance, &UMyGameInstance::IncreasePlayerScore);
 		OnMovesDecreased.AddDynamic(MyGameInstance, &UMyGameInstance::DecreaseRemainingMoves);
@@ -73,14 +72,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		{
 			USwapTilesCommand* Command = NewObject<USwapTilesCommand>();
 			Command->InitializeTiles(FirstClickedTile, SecondClickedTile);
-			if (IsValid(Invoker))
-			{
-				Invoker->ExecuteCommand(Command);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("Invocker is invalid"));
-			}
+			Invoker->ExecuteCommand(Command);
 			TransitionToState(ETileGridState::SwapCheck);
 		}
 		break;
@@ -147,7 +139,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 		break;
 	case ETileGridState::CheckingForPossibleTiles:
 		SetValidTilePairs();
-	// DebugValidTilePairs();
+		DebugValidTilePairs();
 		if (ValidTilePairs.IsEmpty())
 		{
 			TransitionToState(ETileGridState::GameOver);
@@ -167,9 +159,9 @@ void ATileGrid::Tick(float DeltaSeconds)
 
 void ATileGrid::InitializeGrid()
 {
-	for (int32 Row = 0; Row < GridWidth; Row++)
+	for (int32 Row = 0; Row < NumRows; Row++)
 	{
-		for (int32 Col = 0; Col < GridHeight; Col++)
+		for (int32 Col = 0; Col < NumColumns; Col++)
 		{
 			ATile* NewTile = SpawnAndInitializeTile(Row, Col);
 			SetTileAt(Row, Col, NewTile);
@@ -179,9 +171,9 @@ void ATileGrid::InitializeGrid()
 
 ATile* ATileGrid::GetTileAt(int32 Row, int32 Col) const
 {
-	if (Row >= 0 && Row < GridHeight && Col >= 0 && Col < GridWidth)
+	if (Row >= 0 && Row < NumRows && Col >= 0 && Col < NumColumns)
 	{
-		return TileArray[Row * GridWidth + Col];
+		return TileArray[Row * NumColumns + Col];
 	}
 	else
 	{
@@ -191,7 +183,7 @@ ATile* ATileGrid::GetTileAt(int32 Row, int32 Col) const
 
 void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 {
-	if (Row >= 0 && Row < GridHeight && Col >= 0 && Col < GridWidth)
+	if (Row >= 0 && Row < NumRows && Col >= 0 && Col < NumColumns)
 	{
 		if (Tile != nullptr)
 		{
@@ -206,11 +198,14 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 			UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
 			       MovingTilesCounter.GetValue());
 
-			// Todo: Tile 에 delegate binding 진행 (OnTileStoppedMoving)
 			Tile->OnTileStopMovingDelegate.Clear();
 			Tile->OnTileStopMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStoppedMoving);
 		}
-		TileArray[Row * GridWidth + Col] = Tile;
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Tile at Row: %d, Col: %d  => nullptr."), Row, Col);
+		}
+		TileArray[Row * NumColumns + Col] = Tile;
 	}
 }
 
@@ -263,8 +258,8 @@ FVector ATileGrid::GetTileLocation(int32 Row, int32 Col) const
 	// box extent 설정
 	FVector Position;
 	// set x position by Tilesize and x, y
-	Position.X = (GridWidth - 1 - 2 * Col) * TileSize / 2;
-	Position.Y = (GridHeight - 1 - 2 * Row) * TileSize / 2;
+	Position.X = (NumColumns - 1 - 2 * Col) * TileSize / 2;
+	Position.Y = (NumRows - 1 - 2 * Row) * TileSize / 2;
 	Position.Z = 0.0f;
 
 	return Position;
@@ -273,15 +268,15 @@ FVector ATileGrid::GetTileLocation(int32 Row, int32 Col) const
 void ATileGrid::CheckRepeatedTiles(TArray<int32>& NumOfRepeatedTiles, TSet<ATile*>& RepeatedTiles)
 {
 	// 가로 방향으로 (Col 으로)
-	for (int32 Row = 0; Row < GridHeight; Row++)
+	for (int32 Row = 0; Row < NumRows; Row++)
 	{
-		for (int32 Col = 0; Col < GridWidth;)
+		for (int32 Col = 0; Col < NumColumns;)
 		{
 			const int32 StartCol = Col;
 			ATile* StartTile = GetTileAt(Row, StartCol);
 			int32 EndCol = StartCol + 1;
 
-			while (EndCol < GridWidth)
+			while (EndCol < NumColumns)
 			{
 				ATile* NextTile = GetTileAt(Row, EndCol);
 
@@ -314,15 +309,15 @@ void ATileGrid::CheckRepeatedTiles(TArray<int32>& NumOfRepeatedTiles, TSet<ATile
 	}
 
 	// 세로 방향으로 (Row)
-	for (int32 Col = 0; Col < GridHeight; Col++)
+	for (int32 Col = 0; Col < NumColumns; Col++)
 	{
-		for (int32 Row = 0; Row < GridWidth;)
+		for (int32 Row = 0; Row < NumRows;)
 		{
 			const int32 StartRow = Row;
 			ATile* StartTile = GetTileAt(StartRow, Col);
 			int32 EndRow = StartRow + 1;
 
-			while (EndRow < GridHeight)
+			while (EndRow < NumRows)
 			{
 				ATile* NextTile = GetTileAt(EndRow, Col);
 
@@ -374,9 +369,9 @@ void ATileGrid::RemoveRepeatedTiles()
 
 void ATileGrid::MoveTilesDown()
 {
-	for (int32 Col = 0; Col < GridWidth; Col++)
+	for (int32 Col = 0; Col < NumColumns; Col++)
 	{
-		for (int32 Row = GridHeight - 1; Row >= 0; Row--)
+		for (int32 Row = NumRows - 1; Row >= 0; Row--)
 		{
 			ATile* CurrentTile = GetTileAt(Row, Col);
 			if (CurrentTile == nullptr)
@@ -400,10 +395,10 @@ void ATileGrid::MoveTilesDown()
 
 void ATileGrid::GenerateNewTiles()
 {
-	for (int32 Col = 0; Col < GridWidth; Col++)
+	for (int32 Col = 0; Col < NumColumns; Col++)
 	{
 		int32 EmptyCount = 0;
-		for (int32 Row = 0; Row < GridHeight; Row++)
+		for (int32 Row = 0; Row < NumRows; Row++)
 		{
 			if (GetTileAt(Row, Col) != nullptr)
 			{
@@ -414,7 +409,7 @@ void ATileGrid::GenerateNewTiles()
 
 		for (int32 i = 0; i < EmptyCount; i++)
 		{
-			ATile* NewTile = SpawnAndInitializeTile(GridHeight - 1, Col);
+			ATile* NewTile = SpawnAndInitializeTile(NumRows - 1, Col);
 			NewTile->SetActorLocation(GetTileLocation(-i - 1, Col));
 
 			SetTileAt(EmptyCount - 1 - i, Col, NewTile);
@@ -459,10 +454,10 @@ void ATileGrid::DebugValidTilePairs()
 void ATileGrid::SetValidTilePairs()
 {
 	// XOOX 가로
-	for (int32 Row = 0; Row < GridHeight; Row++)
+	for (int32 Row = 0; Row < NumRows; Row++)
 	{
 		// 길이가 2를 구하니까
-		for (int32 Col = 0; Col < GridWidth - 1; Col++)
+		for (int32 Col = 0; Col < NumColumns - 1; Col++)
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* SecondTile = GetTileAt(Row, Col + 1);
@@ -484,9 +479,9 @@ void ATileGrid::SetValidTilePairs()
 	}
 
 	// XOOX 세로
-	for (int32 Col = 0; Col < GridWidth; Col++)
+	for (int32 Col = 0; Col < NumColumns; Col++)
 	{
-		for (int32 Row = 0; Row < GridHeight - 1; Row++)
+		for (int32 Row = 0; Row < NumRows - 1; Row++)
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* SecondTile = GetTileAt(Row + 1, Col);
@@ -508,9 +503,9 @@ void ATileGrid::SetValidTilePairs()
 	}
 
 	// OXO 가로
-	for (int32 Row = 0; Row < GridHeight; Row++)
+	for (int32 Row = 0; Row < NumRows; Row++)
 	{
-		for (int32 Col = 0; Col < GridWidth - 2; Col++)
+		for (int32 Col = 0; Col < NumColumns - 2; Col++)
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* ThirdTile = GetTileAt(Row, Col + 2);
@@ -526,9 +521,9 @@ void ATileGrid::SetValidTilePairs()
 	}
 
 	// OXO 세로
-	for (int32 Col = 0; Col < GridWidth; Col++)
+	for (int32 Col = 0; Col < NumColumns; Col++)
 	{
-		for (int32 Row = 0; Row < GridHeight - 2; Row++)
+		for (int32 Row = 0; Row < NumRows - 2; Row++)
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* ThirdTile = GetTileAt(Row + 2, Col);
