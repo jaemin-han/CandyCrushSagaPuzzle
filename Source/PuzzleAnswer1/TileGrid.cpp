@@ -17,8 +17,8 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	NumColumns = 8;
-	NumRows = 3;
+	NumColumns = 7;
+	NumRows = 6;
 	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
@@ -409,8 +409,7 @@ void ATileGrid::GenerateNewTiles()
 
 		for (int32 i = 0; i < EmptyCount; i++)
 		{
-			ATile* NewTile = SpawnAndInitializeTile(NumRows - 1, Col);
-			NewTile->SetActorLocation(GetTileLocation(-i - 1, Col));
+			ATile* NewTile = SpawnAndInitializeTile(-i - 1, Col);
 
 			SetTileAt(EmptyCount - 1 - i, Col, NewTile);
 			UE_LOG(LogTemp, Log, TEXT("Spawned new tile at Row: %d, Col: %d"), EmptyCount - 1 - i, Col);
@@ -583,6 +582,9 @@ void ATileGrid::HandleOnTileClicked(ATile* ClickedTile)
 {
 	// Idle 상태에서만 클릭 입력을 받을 수 있다.
 	if (CurrentState != ETileGridState::Idle)
+		return;
+
+	if (MovingTilesCounter.GetValue() > 0)
 		return;
 
 	if (FirstClickedTile == nullptr)
