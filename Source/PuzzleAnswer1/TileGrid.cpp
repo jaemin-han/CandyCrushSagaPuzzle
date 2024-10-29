@@ -17,8 +17,8 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	NumColumns = 7;
-	NumRows = 6;
+	NumColumns = 8;
+	NumRows = 3;
 	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
@@ -91,11 +91,18 @@ void ATileGrid::Tick(float DeltaSeconds)
 				Invoker->UndoLastCommand();
 				TransitionToState(ETileGridState::Idle);
 			}
-			NotifyMoveDecrease();
-			FirstClickedTile->SetMaterialEmission(false);
-			SecondClickedTile->SetMaterialEmission(false);
-			FirstClickedTile = nullptr;
-			SecondClickedTile = nullptr;
+			/*	ValidTilePairs.Contains(TilePair) 가 false 일 때, 타일이 돌아올 때 까지
+			 *	transition 을 delay 한다. 이 때 아래 코드가 중복되어 실행될 수 있기에
+			 *	두 선택된 타일이 유요할 때만 코드가 실행되게 한다.
+			*/
+			if (IsValid(FirstClickedTile) && IsValid(SecondClickedTile))
+			{
+				NotifyMoveDecrease();
+				FirstClickedTile->SetMaterialEmission(false);
+				SecondClickedTile->SetMaterialEmission(false);
+				FirstClickedTile = nullptr;
+				SecondClickedTile = nullptr;
+			}
 		}
 		break;
 	case ETileGridState::CheckingForRepeated:

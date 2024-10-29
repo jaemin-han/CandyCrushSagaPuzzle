@@ -56,7 +56,9 @@ public:
 	FOnTileClicked OnTileClicked;
 
 private:
+	UPROPERTY(VisibleAnywhere, Category = "Tile")
 	int32 Row;
+	UPROPERTY(VisibleAnywhere, Category = "Tile")
 	int32 Col;
 
 public:
