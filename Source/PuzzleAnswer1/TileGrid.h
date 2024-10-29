@@ -64,16 +64,14 @@ struct FTilePair
  * 게임의 흐름을 관리하는 데 사용됩니다.
  */
 UENUM(BlueprintType)
-enum class ETileGridState : uint8
+enum class EGameState : uint8
 {
 	Idle UMETA(DisplayName = "Idle"),
-	SwapCheck UMETA(DisplayName = "Swap"),
-	CheckRepeat UMETA(DisplayName = "Checking For Repeated"),
-	RemoveMatches UMETA(DisplayName = "Removing Matches"),
-	DropAndCreateTiles UMETA(DisplayName = "Generating New Tiles and Move Tiles"),
-	WaitTilesStop UMETA(DisplayName = "Wait Until All Tiles Stop Moving"),
-	CheckValidPairs UMETA(DisplayName = "Checking For Possible Tiles"),
-	GameOver UMETA(DisplayName = "Game Over"),
+	SwapCheck UMETA(DisplayName = "SwapCheck"),
+	CheckRepeat UMETA(DisplayName = "CheckRepeat"),
+	RemoveDropCreate UMETA(DisplayName = "RemoveDropCreate"),
+	CheckValidPairs UMETA(DisplayName = "CheckValidPairs"),
+	GameOver UMETA(DisplayName = "GameOver"),
 };
 
 /**
@@ -111,11 +109,11 @@ private:
 	// 이 객체로 현재 State 를 추적함
 	// Tick 에서 State 에 맞는 동작 수행
 	UPROPERTY(VisibleAnywhere, Category = "State")
-	ETileGridState CurrentState;
+	EGameState CurrentState;
 
 	// Transition Grid State Function
 	UFUNCTION(BlueprintCallable, Category = "State")
-	void TransitionToState(ETileGridState NewState);
+	void TransitionToState(EGameState NewState);
 
 	// grid initialize
 	void InitializeGrid();

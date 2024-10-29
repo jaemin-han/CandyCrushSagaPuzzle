@@ -2,11 +2,8 @@
 
 
 #include "TileGrid.h"
-
 #include "MyGameInstance.h"
 #include "Tile.h"
-#include "Async/ParallelFor.h"
-#include "Async/Async.h"
 #include "CommandPattern/SwapTilesCommand.h"
 #include "CommandPattern/TileCommandInvoker.h"
 
@@ -17,13 +14,13 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	NumColumns = 5;
-	NumRows = 8;
+	NumColumns = 3;
+	NumRows = 3;
 	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
 	NumOfRepeatedTilesArray.SetNum(NumColumns > NumRows ? NumColumns + 1 : NumRows + 1);
-	CurrentState = ETileGridState::Idle;
+	CurrentState = EGameState::Idle;
 
 	bGameOverPending = false;
 }
@@ -33,7 +30,7 @@ void ATileGrid::BeginPlay()
 	Super::BeginPlay();
 
 	InitializeGrid();
-	TransitionToState(ETileGridState::CheckRepeat);
+	TransitionToState(EGameState::CheckRepeat);
 
 	if (UMyGameInstance* MyGameInstance = Cast<UMyGameInstance>(GetGameInstance()))
 	{
@@ -49,7 +46,7 @@ void ATileGrid::BeginPlay()
 	Invoker = NewObject<UTileCommandInvoker>();
 }
 
-void ATileGrid::TransitionToState(ETileGridState NewState)
+void ATileGrid::TransitionToState(EGameState NewState)
 {
 	UE_LOG(LogTemp, Warning, TEXT("TransitionToState: %s to %s"), *UEnum::GetValueAsString(CurrentState),
 	       *UEnum::GetValueAsString(NewState));
@@ -62,10 +59,10 @@ void ATileGrid::Tick(float DeltaSeconds)
 
 	switch (CurrentState)
 	{
-	case ETileGridState::Idle:
+	case EGameState::Idle:
 		if (bGameOverPending)
 		{
-			TransitionToState(ETileGridState::GameOver);
+			TransitionToState(EGameState::GameOver);
 		}
 
 		if (IsValid(FirstClickedTile) && IsValid(SecondClickedTile))
@@ -73,23 +70,23 @@ void ATileGrid::Tick(float DeltaSeconds)
 			USwapTilesCommand* Command = NewObject<USwapTilesCommand>();
 			Command->InitializeTiles(FirstClickedTile, SecondClickedTile);
 			Invoker->ExecuteCommand(Command);
-			TransitionToState(ETileGridState::SwapCheck);
+			TransitionToState(EGameState::SwapCheck);
 		}
 		break;
-	case ETileGridState::SwapCheck:
+	case EGameState::SwapCheck:
 		if (MovingTilesCounter.GetValue() <= 0)
 		{
 			FTilePair TilePair(FirstClickedTile, SecondClickedTile);
 			if (ValidTilePairs.Contains(TilePair))
 			{
 				SwapClickedTileOnTileArray(FirstClickedTile, SecondClickedTile);
-				TransitionToState(ETileGridState::CheckRepeat);
+				TransitionToState(EGameState::CheckRepeat);
 				ValidTilePairs.Empty();
 			}
 			else
 			{
 				Invoker->UndoLastCommand();
-				TransitionToState(ETileGridState::Idle);
+				TransitionToState(EGameState::Idle);
 			}
 			/*	ValidTilePairs.Contains(TilePair) 가 false 일 때, 타일이 돌아올 때 까지
 			 *	transition 을 delay 한다. 이 때 아래 코드가 중복되어 실행될 수 있기에
@@ -105,59 +102,44 @@ void ATileGrid::Tick(float DeltaSeconds)
 			}
 		}
 		break;
-	case ETileGridState::CheckRepeat:
-		// CheckingForPossibleTiles 에서 왔을 때를 대비하여, RepeatedTilesSet 이 비어 있을때만 검사를 진행한다.
+	case EGameState::CheckRepeat:
+		// CheckValidPairs 에서 왔을 때를 대비하여, RepeatedTilesSet 이 비어 있을때만 검사를 진행한다.
+		CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
 		if (RepeatedTilesSet.IsEmpty())
 		{
-			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
-		}
-		if (RepeatedTilesSet.IsEmpty())
-		{
-			TransitionToState(ETileGridState::CheckValidPairs);
+			TransitionToState(EGameState::CheckValidPairs);
 		}
 		else
 		{
-			TransitionToState(ETileGridState::RemoveMatches);
+			TransitionToState(EGameState::RemoveDropCreate);
 		}
 		break;
-	case ETileGridState::RemoveMatches:
-		RemoveRepeatedTiles();
-		CalculateAndBroadcastScore();
-		TransitionToState(ETileGridState::DropAndCreateTiles);
-		break;
-	case ETileGridState::DropAndCreateTiles:
-		MoveTilesDown();
-		GenerateNewTiles();
-		TransitionToState(ETileGridState::WaitTilesStop);
-		break;
-	case ETileGridState::WaitTilesStop:
+	case EGameState::RemoveDropCreate:
 		if (MovingTilesCounter.GetValue() <= 0)
 		{
-			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
-			if (RepeatedTilesSet.IsEmpty())
-			{
-				TransitionToState(ETileGridState::CheckValidPairs);
-			}
-			else
-			{
-				TransitionToState(ETileGridState::CheckRepeat);
-			}
+			RemoveRepeatedTiles();
+			CalculateAndBroadcastScore();
+			MoveTilesDown();
+			GenerateNewTiles();
+			TransitionToState(EGameState::CheckRepeat);
 		}
 		break;
-	case ETileGridState::CheckValidPairs:
+	case EGameState::CheckValidPairs:
 		SetValidTilePairs();
 		DebugValidTilePairs();
 		if (ValidTilePairs.IsEmpty())
 		{
-			TransitionToState(ETileGridState::GameOver);
+			TransitionToState(EGameState::GameOver);
 		}
 		else
 		{
-			TransitionToState(ETileGridState::Idle);
+			TransitionToState(EGameState::Idle);
 		}
 		break;
-	case ETileGridState::GameOver:
-		OnGameOver.Execute();
+	case EGameState::GameOver:
+		// 타일이 끝까지 내려오고 게임오버 메시지가 나와야 플레이어가 납득할 수 있다
+		if (MovingTilesCounter.GetValue() <= 0)
+			OnGameOver.Execute();
 		break;
 	default:
 		break;
@@ -199,15 +181,15 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 			Tile->OnTileStartMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStartedMoving);
 			Tile->StartMoving();
 
-			UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
-			       MovingTilesCounter.GetValue());
+			// UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
+			//        MovingTilesCounter.GetValue());
 
 			Tile->OnTileStopMovingDelegate.Clear();
 			Tile->OnTileStopMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStoppedMoving);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Tile at Row: %d, Col: %d  => nullptr."), Row, Col);
+			// UE_LOG(LogTemp, Warning, TEXT("Tile at Row: %d, Col: %d  => nullptr."), Row, Col);
 		}
 		TileArray[Row * NumColumns + Col] = Tile;
 	}
@@ -298,11 +280,11 @@ void ATileGrid::CheckRepeatedTiles(TArray<int32>& NumOfRepeatedTiles, TSet<ATile
 					// 해당 타일들을 RepeatedTiles 에 추가함
 					RepeatedTiles.Add(GetTileAt(Row, IndexCol));
 					// Row, IndexCol Debug
-					UE_LOG(LogTemp, Log, TEXT("Row, IndexCol: %d %d"), Row, IndexCol);
+					// UE_LOG(LogTemp, Log, TEXT("Row, IndexCol: %d %d"), Row, IndexCol);
 				}
 				// 해당 연속된 타일 수를 NumOfRepeated 에 반영
 				NumOfRepeatedTiles[EndCol - StartCol]++;
-				UE_LOG(LogTemp, Log, TEXT("NumOfRepeatedTiles: %d"), EndCol - StartCol);
+				// UE_LOG(LogTemp, Log, TEXT("NumOfRepeatedTiles: %d"), EndCol - StartCol);
 			}
 			// EndCol 부터 다시 검사
 			Col = EndCol;
@@ -339,11 +321,11 @@ void ATileGrid::CheckRepeatedTiles(TArray<int32>& NumOfRepeatedTiles, TSet<ATile
 					// 해당 타일들을 RepeatedTiles 에 추가함
 					RepeatedTiles.Add(GetTileAt(IndexRow, Col));
 					// Row, IndexCol Debug
-					UE_LOG(LogTemp, Log, TEXT("Row, IndexCol: %d %d"), IndexRow, Col);
+					// UE_LOG(LogTemp, Log, TEXT("Row, IndexCol: %d %d"), IndexRow, Col);
 				}
 				// 해당 연속된 타일 수를 NumOfRepeated 에 반영
 				NumOfRepeatedTiles[EndRow - StartRow]++;
-				UE_LOG(LogTemp, Log, TEXT("NumOfRepeatedTiles: %d"), EndRow - StartRow);
+				// UE_LOG(LogTemp, Log, TEXT("NumOfRepeatedTiles: %d"), EndRow - StartRow);
 			}
 			// EndCol 부터 다시 검사
 			Row = EndRow;
@@ -382,8 +364,8 @@ void ATileGrid::MoveTilesDown()
 					ATile* AboveTile = GetTileAt(AboveRow, Col);
 					if (AboveTile != nullptr)
 					{
-						UE_LOG(LogTemp, Log, TEXT("Moving tile from Row: %d, Col: %d to Row: %d, Col: %d"), AboveRow,
-						       Col, Row, Col);
+						// UE_LOG(LogTemp, Log, TEXT("Moving tile from Row: %d, Col: %d to Row: %d, Col: %d"), AboveRow,
+						//        Col, Row, Col);
 						SetTileAt(Row, Col, AboveTile);
 						SetTileAt(AboveRow, Col, nullptr);
 						break;
@@ -413,7 +395,7 @@ void ATileGrid::GenerateNewTiles()
 			ATile* NewTile = SpawnAndInitializeTile(-i - 1, Col);
 
 			SetTileAt(EmptyCount - 1 - i, Col, NewTile);
-			UE_LOG(LogTemp, Log, TEXT("Spawned new tile at Row: %d, Col: %d"), EmptyCount - 1 - i, Col);
+			// UE_LOG(LogTemp, Log, TEXT("Spawned new tile at Row: %d, Col: %d"), EmptyCount - 1 - i, Col);
 		}
 	}
 }
@@ -421,13 +403,13 @@ void ATileGrid::GenerateNewTiles()
 void ATileGrid::OnTileStoppedMoving()
 {
 	MovingTilesCounter.Decrement();
-	UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
+	// UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }
 
 void ATileGrid::OnTileStartedMoving()
 {
 	MovingTilesCounter.Increment();
-	UE_LOG(LogTemp, Log, TEXT("A tile started moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
+	// UE_LOG(LogTemp, Log, TEXT("A tile started moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }
 
 void ATileGrid::DebugValidTilePairs()
@@ -436,8 +418,8 @@ void ATileGrid::DebugValidTilePairs()
 	{
 		if (Pair.First && Pair.Second) // 유효한 포인터인지 확인
 		{
-			FVector Start = Pair.First->GetActorLocation();
-			FVector End = Pair.Second->GetActorLocation();
+			FVector Start = GetTileLocationOfGrid(Pair.First->GetRow(), Pair.First->GetCol());
+			FVector End = GetTileLocationOfGrid(Pair.Second->GetRow(), Pair.Second->GetCol());
 
 			Start.Z += 100.0;
 			End.Z += 100.0;
@@ -445,8 +427,8 @@ void ATileGrid::DebugValidTilePairs()
 			DrawDebugLine(GetWorld(), Start, End, FColor::White, false, 2.0f, 0, 5.0f);
 
 			// 로그로 출력 (디버깅 용도)
-			UE_LOG(LogTemp, Log, TEXT("Drawing line between %s and %s"),
-			       *Pair.First->GetName(), *Pair.Second->GetName());
+			// UE_LOG(LogTemp, Log, TEXT("Drawing line between %s and %s"),
+			//        *Pair.First->GetName(), *Pair.Second->GetName());
 		}
 	}
 }
@@ -582,7 +564,7 @@ void ATileGrid::CheckDownTile(int32 Row, int32 Col, ETileType TileType)
 void ATileGrid::HandleOnTileClicked(ATile* ClickedTile)
 {
 	// Idle 상태에서만 클릭 입력을 받을 수 있다.
-	if (CurrentState != ETileGridState::Idle)
+	if (CurrentState != EGameState::Idle)
 		return;
 
 	if (MovingTilesCounter.GetValue() > 0)
