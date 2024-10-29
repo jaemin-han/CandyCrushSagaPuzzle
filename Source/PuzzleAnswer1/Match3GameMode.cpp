@@ -40,9 +40,8 @@ void AMatch3GameMode::BeginPlay()
 			});
 		}
 	}
-
-
-	// auto* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	
+	// actor 의 NotifyActorOnClicked 이벤트가 실행할 수 있게 하는 코드
 	auto* PlayerController = GetWorld()->GetFirstPlayerController();
 	PlayerController->SetShowMouseCursor(true);
 	PlayerController->bEnableClickEvents = true;

@@ -19,7 +19,7 @@ void ATile::BeginPlay()
 {
 	Super::BeginPlay();
 
-	TileType = GetTileType();
+	TileType = GetRandomTileTypeEnum();
 }
 
 void ATile::Tick(float DeltaSeconds)
@@ -41,33 +41,23 @@ void ATile::Tick(float DeltaSeconds)
 	}
 }
 
-bool ATile::IsMatching(const ATile* OtherTile) const
+ETileType ATile::GetRandomTileTypeEnum() const
 {
-	return this->TileType == OtherTile->TileType;
-}
+	int32 Index = FMath::RandRange(0, static_cast<int>(ETileType::White));
 
-FName ATile::GetTileType() const
-{
-	// get random integer
-	int32 index = FMath::RandRange(0, 3);
-
-	if (index == 0)
+	switch (Index)
 	{
-		return FName("Red");
+	case 0:
+		return ETileType::Red;
+	case 1:
+		return ETileType::Green;
+	case 2:
+		return ETileType::Blue;
+	case 3:
+		return ETileType::White;
+	default:
+		return ETileType::White;
 	}
-	else if (index == 1)
-	{
-		return FName("Blue");
-	}
-	else if (index == 2)
-	{
-		return FName("Green");
-	}
-	else if (index == 3)
-	{
-		return FName("White");
-	}
-	return FName("White");
 }
 
 void ATile::DestroyAndSpawnEmitter()
@@ -76,11 +66,6 @@ void ATile::DestroyAndSpawnEmitter()
 	// Spawn Effect On this Part
 
 	// // // // // 
-}
-
-void ATile::SetTargetLocation(FVector NewTargetLocation)
-{
-	TargetLocation = NewTargetLocation;
 }
 
 void ATile::StartMoving()
@@ -104,16 +89,15 @@ void ATile::NotifyActorOnClicked(FKey ButtonPressed)
 	UE_LOG(LogTemp, Warning, TEXT("NotifyActorOnClicked"));
 }
 
+void ATile::SetTargetLoc(const FVector& NewLocation)
+{
+	TargetLocation = NewLocation;
+}
+
 void ATile::SetMaterialEmission(const bool bEmission) const
 {
 	if (bEmission)
-	{
-		CubeMeshComponent->SetRenderCustomDepth(true);
-		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 10.0f);
-	}
+		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 20.0f);
 	else
-	{
-		CubeMeshComponent->SetRenderCustomDepth(false);
-		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 0.0f);
-	}
+		CubeMeshComponent->SetScalarParameterValueOnMaterials(FName("Emission"), 1.0f);
 }

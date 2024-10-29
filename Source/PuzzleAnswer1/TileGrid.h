@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "TileGrid.generated.h"
 
+enum class ETileType: uint8;
 class ATile;
 
 // Delegate 선언
@@ -67,11 +68,11 @@ enum class ETileGridState : uint8
 {
 	Idle UMETA(DisplayName = "Idle"),
 	SwapCheck UMETA(DisplayName = "Swap"),
-	CheckingForRepeated UMETA(DisplayName = "Checking For Repeated"),
-	RemovingMatches UMETA(DisplayName = "Removing Matches"),
-	CheckAllTilesToMoveAndDropTiles UMETA(DisplayName = "Generating New Tiles"),
-	WaitUntilAllTilesStopMoving UMETA(DisplayName = "Wait Until All Tiles Stop Moving"),
-	CheckingForPossibleTiles UMETA(DisplayName = "Checking For Possible Tiles"),
+	CheckRepeat UMETA(DisplayName = "Checking For Repeated"),
+	RemoveMatches UMETA(DisplayName = "Removing Matches"),
+	DropAndCreateTiles UMETA(DisplayName = "Generating New Tiles and Move Tiles"),
+	WaitTilesStop UMETA(DisplayName = "Wait Until All Tiles Stop Moving"),
+	CheckValidPairs UMETA(DisplayName = "Checking For Possible Tiles"),
 	GameOver UMETA(DisplayName = "Game Over"),
 };
 
@@ -109,7 +110,7 @@ private:
 
 	// 이 객체로 현재 State 를 추적함
 	// Tick 에서 State 에 맞는 동작 수행
-	UPROPERTY(EditAnywhere, Category = "State")
+	UPROPERTY(VisibleAnywhere, Category = "State")
 	ETileGridState CurrentState;
 
 	// Transition Grid State Function
@@ -128,7 +129,7 @@ private:
 	// Tile 을 스폰하고, 랜덤하게 Material 을 결정하며  Row, Col 에 따른 위치를 설정한다
 	ATile* SpawnAndInitializeTile(int32 Row, int32 Col);
 	// Row 행 Col 열 타일이 world 상에서 어디에 위치할지를 리턴한다
-	FVector GetTileLocation(int32 Row, int32 Col) const;
+	FVector GetTileLocationOfGrid(int32 Row, int32 Col) const;
 
 	// 전체 TileArray 를 순회하여 연속된 타입이 얼마나 존재하는지 확인한다.
 	// NumOfRepeatedTiles 에는 반복된 타일이 길이별로 얼마나 존재하는지
@@ -168,10 +169,10 @@ private:
 	void SetValidTilePairs();
 	// SetValidTilePairs 내부에서 사용할 함수들, 하나의 방향씩을 담당한다.
 	// 각각 상, 하, 좌, 우 방향으로 swap 했을 때 연속된 타일이 생기는지 검사 
-	void CheckLeftTile(int32 Row, int32 Col, FName TileType);
-	void CheckRightTile(int32 Row, int32 Col, FName TileType);
-	void CheckUpTile(int32 Row, int32 Col, FName TileType);
-	void CheckDownTile(int32 Row, int32 Col, FName TileType);
+	void CheckLeftTile(int32 Row, int32 Col, ETileType TileType);
+	void CheckRightTile(int32 Row, int32 Col, ETileType TileType);
+	void CheckUpTile(int32 Row, int32 Col, ETileType TileType);
+	void CheckDownTile(int32 Row, int32 Col, ETileType TileType);
 
 	// 타일에서 Onclicked 이벤트가 발생했을 때, FirstClickedTile, SecondClickedTile 에 적절
 	// 하게 할당하고, 해당 타일에 highlight 효과를 적용한다

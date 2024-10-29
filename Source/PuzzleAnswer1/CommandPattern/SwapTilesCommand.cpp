@@ -8,14 +8,20 @@
 
 void USwapTilesCommand::Execute()
 {
-	Swap(FirstTile->TargetLocation, SecondTile->TargetLocation);
+	const FVector TempLocation = FirstTile->GetTargetLoc();
+	FirstTile->SetTargetLoc(SecondTile->GetTargetLoc());
+	SecondTile->SetTargetLoc(TempLocation);
+	
 	FirstTile->StartMoving();
 	SecondTile->StartMoving();
 }
 
 void USwapTilesCommand::Undo()
 {
-	Swap(FirstTile->TargetLocation, SecondTile->TargetLocation);
+	const FVector TempLocation = FirstTile->GetTargetLoc();
+	FirstTile->SetTargetLoc(SecondTile->GetTargetLoc());
+	SecondTile->SetTargetLoc(TempLocation);
+	
 	FirstTile->StartMoving();
 	SecondTile->StartMoving();
 }

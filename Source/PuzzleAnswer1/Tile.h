@@ -6,6 +6,16 @@
 #include "GameFramework/Actor.h"
 #include "Tile.generated.h"
 
+// 타일 유형
+UENUM(BlueprintType)
+enum class ETileType: uint8
+{
+	Red UMETA(DisplayName = "Red"),
+	Green UMETA(DisplayName = "Green"),
+	Blue UMETA(DisplayName = "Blue"),
+	White UMETA(DisplayName = "White"),
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStopMovingDelegate);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStartMovingDelegate);
@@ -29,33 +39,17 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
-public:
-	// tile 간의 구분 -> FName
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Properties")
-	FName TileType;
-
-	// 
-	bool IsMatching(const ATile* OtherTile) const;
-
-	FName GetTileType() const;
-
-	void DestroyAndSpawnEmitter();
+private:
+	ETileType GetRandomTileTypeEnum() const;
+	// Tile이 목표로 할 위치, bIsMoving 이 참이면 Tick 에서 타일을 해당 위치로 이동시킨다
+	FVector TargetLocation;
 
 	bool bIsMoving = false;
-	FVector TargetLocation;
-	void SetTargetLocation(FVector NewTargetLocation);
-
-	FOnTileStopMovingDelegate OnTileStopMovingDelegate;
-	FOnTileStartMovingDelegate OnTileStartMovingDelegate;
-
-	void StartMoving();
 	void StopMoving();
 
+	// tile 이 클릭당했을 때 실행될 함수
 	virtual void NotifyActorOnClicked(FKey ButtonPressed) override;
 
-	FOnTileClicked OnTileClicked;
-
-private:
 	UPROPERTY(VisibleAnywhere, Category = "Tile")
 	int32 Row;
 	UPROPERTY(VisibleAnywhere, Category = "Tile")
@@ -67,5 +61,18 @@ public:
 	int32 GetRow() const { return Row; };
 	int32 GetCol() const { return Col; };
 
+	FOnTileStopMovingDelegate OnTileStopMovingDelegate;
+	FOnTileStartMovingDelegate OnTileStartMovingDelegate;
+	FOnTileClicked OnTileClicked;
+
+	FVector GetTargetLoc() const { return TargetLocation; };
+	void SetTargetLoc(const FVector& NewLocation);
+	void StartMoving();
+
+
 	void SetMaterialEmission(bool bEmission) const;
+	void DestroyAndSpawnEmitter();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile Properties")
+	ETileType TileType;
 };

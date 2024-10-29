@@ -17,8 +17,8 @@ ATileGrid::ATileGrid()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	NumColumns = 8;
-	NumRows = 3;
+	NumColumns = 5;
+	NumRows = 8;
 	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
 	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
@@ -33,7 +33,7 @@ void ATileGrid::BeginPlay()
 	Super::BeginPlay();
 
 	InitializeGrid();
-	TransitionToState(ETileGridState::CheckingForRepeated);
+	TransitionToState(ETileGridState::CheckRepeat);
 
 	if (UMyGameInstance* MyGameInstance = Cast<UMyGameInstance>(GetGameInstance()))
 	{
@@ -83,7 +83,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 			if (ValidTilePairs.Contains(TilePair))
 			{
 				SwapClickedTileOnTileArray(FirstClickedTile, SecondClickedTile);
-				TransitionToState(ETileGridState::CheckingForRepeated);
+				TransitionToState(ETileGridState::CheckRepeat);
 				ValidTilePairs.Empty();
 			}
 			else
@@ -105,7 +105,7 @@ void ATileGrid::Tick(float DeltaSeconds)
 			}
 		}
 		break;
-	case ETileGridState::CheckingForRepeated:
+	case ETileGridState::CheckRepeat:
 		// CheckingForPossibleTiles 에서 왔을 때를 대비하여, RepeatedTilesSet 이 비어 있을때만 검사를 진행한다.
 		if (RepeatedTilesSet.IsEmpty())
 		{
@@ -113,38 +113,38 @@ void ATileGrid::Tick(float DeltaSeconds)
 		}
 		if (RepeatedTilesSet.IsEmpty())
 		{
-			TransitionToState(ETileGridState::CheckingForPossibleTiles);
+			TransitionToState(ETileGridState::CheckValidPairs);
 		}
 		else
 		{
-			TransitionToState(ETileGridState::RemovingMatches);
+			TransitionToState(ETileGridState::RemoveMatches);
 		}
 		break;
-	case ETileGridState::RemovingMatches:
+	case ETileGridState::RemoveMatches:
 		RemoveRepeatedTiles();
 		CalculateAndBroadcastScore();
-		TransitionToState(ETileGridState::CheckAllTilesToMoveAndDropTiles);
+		TransitionToState(ETileGridState::DropAndCreateTiles);
 		break;
-	case ETileGridState::CheckAllTilesToMoveAndDropTiles:
+	case ETileGridState::DropAndCreateTiles:
 		MoveTilesDown();
 		GenerateNewTiles();
-		TransitionToState(ETileGridState::WaitUntilAllTilesStopMoving);
+		TransitionToState(ETileGridState::WaitTilesStop);
 		break;
-	case ETileGridState::WaitUntilAllTilesStopMoving:
+	case ETileGridState::WaitTilesStop:
 		if (MovingTilesCounter.GetValue() <= 0)
 		{
 			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
 			if (RepeatedTilesSet.IsEmpty())
 			{
-				TransitionToState(ETileGridState::CheckingForPossibleTiles);
+				TransitionToState(ETileGridState::CheckValidPairs);
 			}
 			else
 			{
-				TransitionToState(ETileGridState::CheckingForRepeated);
+				TransitionToState(ETileGridState::CheckRepeat);
 			}
 		}
 		break;
-	case ETileGridState::CheckingForPossibleTiles:
+	case ETileGridState::CheckValidPairs:
 		SetValidTilePairs();
 		DebugValidTilePairs();
 		if (ValidTilePairs.IsEmpty())
@@ -182,10 +182,7 @@ ATile* ATileGrid::GetTileAt(int32 Row, int32 Col) const
 	{
 		return TileArray[Row * NumColumns + Col];
 	}
-	else
-	{
-		return nullptr;
-	}
+	return nullptr;
 }
 
 void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
@@ -194,7 +191,7 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 	{
 		if (Tile != nullptr)
 		{
-			Tile->SetTargetLocation(GetTileLocation(Row, Col));
+			Tile->SetTargetLoc(GetTileLocationOfGrid(Row, Col));
 			Tile->SetRow(Row);
 			Tile->SetCol(Col);
 
@@ -219,7 +216,7 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 ATile* ATileGrid::SpawnAndInitializeTile(int32 Row, int32 Col)
 {
 	// box extent 설정
-	const FVector Position = GetTileLocation(Row, Col);
+	const FVector Position = GetTileLocationOfGrid(Row, Col);
 	ATile* NewTile = GetWorld()->SpawnActor<ATile>(TileClass, Position, FRotator());
 
 	// Click 관련 delegate 에 연결
@@ -228,27 +225,24 @@ ATile* ATileGrid::SpawnAndInitializeTile(int32 Row, int32 Col)
 	// material 설정
 
 	UMaterialInstance* Material;
-
-	if (NewTile->TileType == "Red")
+	switch (NewTile->TileType)
 	{
+	case ETileType::Red:
 		Material = Materials[0];
-	}
-	else if (NewTile->TileType == "Blue")
-	{
+		break;
+	case ETileType::Green:
 		Material = Materials[1];
-	}
-	else if (NewTile->TileType == "Green")
-	{
+		break;
+	case ETileType::Blue:
 		Material = Materials[2];
-	}
-	else if (NewTile->TileType == "White")
-	{
+		break;
+	case ETileType::White:
 		Material = Materials[3];
-	}
-	else
-	{
-		// 빌드 안돼서 넣어놓음
-		Material = Materials[3];
+		break;
+	default:
+		Material = nullptr;
+		UE_LOG(LogTemp, Error, TEXT("ATileGrid::SpawnAndInitializeTile Invalid Material!"));
+		break;
 	}
 
 	int32 NumMaterial = NewTile->CubeMeshComponent->GetMaterials().Num();
@@ -260,7 +254,7 @@ ATile* ATileGrid::SpawnAndInitializeTile(int32 Row, int32 Col)
 	return NewTile;
 }
 
-FVector ATileGrid::GetTileLocation(int32 Row, int32 Col) const
+FVector ATileGrid::GetTileLocationOfGrid(int32 Row, int32 Col) const
 {
 	// box extent 설정
 	FVector Position;
@@ -468,7 +462,7 @@ void ATileGrid::SetValidTilePairs()
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* SecondTile = GetTileAt(Row, Col + 1);
 
-			FName TileType = FirstTile->TileType;
+			ETileType TileType = FirstTile->TileType;
 			if (TileType != SecondTile->TileType)
 				continue;
 
@@ -491,7 +485,7 @@ void ATileGrid::SetValidTilePairs()
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* SecondTile = GetTileAt(Row + 1, Col);
-			FName TileType = FirstTile->TileType;
+			ETileType TileType = FirstTile->TileType;
 
 			if (TileType != SecondTile->TileType)
 				continue;
@@ -515,7 +509,7 @@ void ATileGrid::SetValidTilePairs()
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* ThirdTile = GetTileAt(Row, Col + 2);
-			FName TileType = FirstTile->TileType;
+			ETileType TileType = FirstTile->TileType;
 
 			if (TileType != ThirdTile->TileType)
 				continue;
@@ -533,7 +527,7 @@ void ATileGrid::SetValidTilePairs()
 		{
 			ATile* FirstTile = GetTileAt(Row, Col);
 			ATile* ThirdTile = GetTileAt(Row + 2, Col);
-			FName TileType = FirstTile->TileType;
+			ETileType TileType = FirstTile->TileType;
 
 			if (TileType != ThirdTile->TileType)
 				continue;
@@ -545,7 +539,7 @@ void ATileGrid::SetValidTilePairs()
 	}
 }
 
-void ATileGrid::CheckLeftTile(int32 Row, int32 Col, FName TileType)
+void ATileGrid::CheckLeftTile(int32 Row, int32 Col, ETileType TileType)
 {
 	ATile* CurTile = GetTileAt(Row, Col);
 	ATile* LeftTile = GetTileAt(Row, Col - 1);
@@ -555,7 +549,7 @@ void ATileGrid::CheckLeftTile(int32 Row, int32 Col, FName TileType)
 	}
 }
 
-void ATileGrid::CheckRightTile(int32 Row, int32 Col, FName TileType)
+void ATileGrid::CheckRightTile(int32 Row, int32 Col, ETileType TileType)
 {
 	ATile* CurTile = GetTileAt(Row, Col);
 	ATile* RightTile = GetTileAt(Row, Col + 1);
@@ -565,7 +559,7 @@ void ATileGrid::CheckRightTile(int32 Row, int32 Col, FName TileType)
 	}
 }
 
-void ATileGrid::CheckUpTile(int32 Row, int32 Col, FName TileType)
+void ATileGrid::CheckUpTile(int32 Row, int32 Col, ETileType TileType)
 {
 	ATile* CurTile = GetTileAt(Row, Col);
 	ATile* UpTile = GetTileAt(Row - 1, Col);
@@ -575,7 +569,7 @@ void ATileGrid::CheckUpTile(int32 Row, int32 Col, FName TileType)
 	}
 }
 
-void ATileGrid::CheckDownTile(int32 Row, int32 Col, FName TileType)
+void ATileGrid::CheckDownTile(int32 Row, int32 Col, ETileType TileType)
 {
 	ATile* CurTile = GetTileAt(Row, Col);
 	ATile* DownTile = GetTileAt(Row + 1, Col);
@@ -629,6 +623,8 @@ void ATileGrid::SwapClickedTileOnTileArray(ATile* FirstTile, ATile* SecondTile)
 	int32 SecondRow = SecondTile->GetRow();
 	int32 SecondCol = SecondTile->GetCol();
 
+	// 이 코드가 실행되어야 각 타일의 Row, Col 값이 swap 되고
+	// TileArray 값도 swap 됨
 	SetTileAt(FirstRow, FirstCol, SecondTile);
 	SetTileAt(SecondRow, SecondCol, FirstTile);
 }
