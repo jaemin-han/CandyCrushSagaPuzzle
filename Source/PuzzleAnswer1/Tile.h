@@ -16,9 +16,9 @@ enum class ETileType: uint8
 	White UMETA(DisplayName = "White"),
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStopMovingDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStopMoveDelegate);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStartMovingDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTileStartMoveDelegate);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTileClicked, ATile*, ClickedTile);
 
@@ -61,8 +61,8 @@ public:
 	int32 GetRow() const { return Row; };
 	int32 GetCol() const { return Col; };
 
-	FOnTileStopMovingDelegate OnTileStopMovingDelegate;
-	FOnTileStartMovingDelegate OnTileStartMovingDelegate;
+	FOnTileStopMoveDelegate OnTileStopMoveDelegate;
+	FOnTileStartMoveDelegate OnTileStartMoveDelegate;
 	FOnTileClicked OnTileClicked;
 
 	FVector GetTargetLoc() const { return TargetLocation; };

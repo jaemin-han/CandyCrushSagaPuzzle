@@ -153,9 +153,9 @@ private:
 	FThreadSafeCounter MovingTilesCounter;
 	// Tile 의 delegate 와 binding 될 두 함수
 	UFUNCTION()
-	void OnTileStoppedMoving();
+	void HandleTileStopMove();
 	UFUNCTION()
-	void OnTileStartedMoving();
+	void HandleTileStartMove();
 
 	// 교환하여 3 개의 연속된 타일을 만들 수 있는 타일의 쌍을 가지는 Set
 	UPROPERTY(VisibleAnywhere, Category = "Tile Grid")

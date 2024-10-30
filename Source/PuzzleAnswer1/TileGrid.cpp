@@ -128,12 +128,12 @@ void ATileGrid::Tick(float DeltaSeconds)
 	case ETileGridState::DropAndCreateTiles:
 		MoveTilesDown();
 		GenerateNewTiles();
+		CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
 		TransitionToState(ETileGridState::WaitTilesStop);
 		break;
 	case ETileGridState::WaitTilesStop:
 		if (MovingTilesCounter.GetValue() <= 0)
 		{
-			CheckRepeatedTiles(NumOfRepeatedTilesArray, RepeatedTilesSet);
 			if (RepeatedTilesSet.IsEmpty())
 			{
 				TransitionToState(ETileGridState::CheckValidPairs);
@@ -195,15 +195,15 @@ void ATileGrid::SetTileAt(int32 Row, int32 Col, ATile* Tile)
 			Tile->SetRow(Row);
 			Tile->SetCol(Col);
 
-			Tile->OnTileStartMovingDelegate.Clear();
-			Tile->OnTileStartMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStartedMoving);
+			Tile->OnTileStartMoveDelegate.Clear();
+			Tile->OnTileStartMoveDelegate.AddDynamic(this, &ATileGrid::HandleTileStartMove);
 			Tile->StartMoving();
 
 			UE_LOG(LogTemp, Log, TEXT("Tile at Row: %d, Col: %d started moving. MovingTilesCount: %d"), Row, Col,
 			       MovingTilesCounter.GetValue());
 
-			Tile->OnTileStopMovingDelegate.Clear();
-			Tile->OnTileStopMovingDelegate.AddDynamic(this, &ATileGrid::OnTileStoppedMoving);
+			Tile->OnTileStopMoveDelegate.Clear();
+			Tile->OnTileStopMoveDelegate.AddDynamic(this, &ATileGrid::HandleTileStopMove);
 		}
 		else
 		{
@@ -418,16 +418,14 @@ void ATileGrid::GenerateNewTiles()
 	}
 }
 
-void ATileGrid::OnTileStoppedMoving()
+void ATileGrid::HandleTileStopMove()
 {
 	MovingTilesCounter.Decrement();
-	UE_LOG(LogTemp, Log, TEXT("A tile stopped moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }
 
-void ATileGrid::OnTileStartedMoving()
+void ATileGrid::HandleTileStartMove()
 {
 	MovingTilesCounter.Increment();
-	UE_LOG(LogTemp, Log, TEXT("A tile started moving. Current MovingTilesCount: %d"), MovingTilesCounter.GetValue());
 }
 
 void ATileGrid::DebugValidTilePairs()

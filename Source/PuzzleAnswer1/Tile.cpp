@@ -71,13 +71,13 @@ void ATile::DestroyAndSpawnEmitter()
 void ATile::StartMoving()
 {
 	bIsMoving = true;
-	OnTileStartMovingDelegate.Broadcast();
+	OnTileStartMoveDelegate.Broadcast();
 }
 
 void ATile::StopMoving()
 {
 	bIsMoving = false;
-	OnTileStopMovingDelegate.Broadcast();
+	OnTileStopMoveDelegate.Broadcast();
 }
 
 void ATile::NotifyActorOnClicked(FKey ButtonPressed)
