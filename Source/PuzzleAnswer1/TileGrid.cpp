@@ -16,11 +16,7 @@ ATileGrid::ATileGrid()
 
 	NumColumns = 5;
 	NumRows = 8;
-	TileArray.SetNum(NumColumns * NumRows);
 	Materials.SetNum(4);
-	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
-	NumOfRepeatedTilesArray.SetNum(NumColumns > NumRows ? NumColumns + 1 : NumRows + 1);
-	CurrentState = EGameState::Idle;
 
 	bGameOverPending = false;
 }
@@ -28,6 +24,11 @@ ATileGrid::ATileGrid()
 void ATileGrid::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	TileArray.SetNum(NumColumns * NumRows);
+	// 3이면 0, 1, 2, 3 총 4개 필요하니까 1 더해준다
+	NumOfRepeatedTilesArray.SetNum(NumColumns > NumRows ? NumColumns + 1 : NumRows + 1);
+	CurrentState = EGameState::Idle;
 
 	InitializeGrid();
 	TransitionToState(EGameState::CheckRepeat);

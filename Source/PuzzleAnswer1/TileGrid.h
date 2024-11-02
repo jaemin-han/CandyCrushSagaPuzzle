@@ -207,12 +207,12 @@ private:
 
 public:
 	// grid width, height
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tile Grid", meta=(allowPrivateAccess="true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	int32 NumColumns;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tile Grid", meta=(allowPrivateAccess="true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	int32 NumRows;
 	// tile 의 cube mesh 를 뭘 고르느냐에 따라 일일이 수정해야 합니다
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tile Grid", meta=(allowPrivateAccess="true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tile Grid")
 	float TileSize = 100.0f;
 	FOnGameOver OnGameOver;
 };
